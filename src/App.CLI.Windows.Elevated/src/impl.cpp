@@ -127,8 +127,9 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 		}
 		else if (action == "pending-remove")
 		{
-			std::string pathTemp = GetTempPath("wfp_rules.xml");
+			std::string pathTemp = FsRuntimeTempPath("wfp_rules.xml");
 
+			FsFileDelete(pathTemp);
 			ExecResult result = ExecEx(FsLocateExecutable("netsh.exe"), { "WFP", "Show", "Filters", "file=" + pathTemp });
 			std::string xml = FsFileReadText(pathTemp);
 			FsFileDelete(pathTemp);
@@ -1015,7 +1016,7 @@ DWORD Impl::WfpGetLastErrorCode()
 	return m_wfpLastErrorCode;
 }
 
-#include <shlobj.h>   // Necessario per SHGetKnownFolderPath
+#include <shlobj.h>   // Need for SHGetKnownFolderPath
 
 // Note: not yet used
 void Impl::CleanupCompatibility()

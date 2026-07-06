@@ -516,11 +516,6 @@ namespace Eddie.UI.Cocoa.Osx
 			RequestAttention();
 		}
 
-        private void Window_WillClose(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
-        }
-
         public bool Shutdown()
 		{
 			if (Engine.NeedAskExitConfirm())

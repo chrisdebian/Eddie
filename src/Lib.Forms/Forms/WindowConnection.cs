@@ -66,6 +66,7 @@ namespace Eddie.Forms.Forms
 
 			m_connection = Info.BuildConnection(null);
 
+			// Intentional: show full generated config in connection detail dialog.
 			txtConfigGenerated.Text = Platform.Instance.NormalizeString(m_connection.ExportConfigStartup());
 
 			string configOriginal = m_connection.ExportConfigOriginal();

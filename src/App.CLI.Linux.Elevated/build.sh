@@ -30,16 +30,6 @@ FILES="${FILES} $BASEPATH/../Lib.CLI.Elevated/src/ping.cpp"
 FILES="${FILES} $BASEPATH/../../dependencies/sha256/sha256.cpp"
 FILES="${FILES} $BASEPATH/obj/wireguard.o"
 
-#SPECIAL="$2"
-#if [ ${SPECIAL} == "NOLZMA" ]; then
-#	echo Link without LZMA	
-#    DEFINES="${DEFINES} -DEDDIE_NOLZMA"
-#else 
-#	echo Link with LZMA
-#	FLAGS="${FLAGS} -llzma"
-#	FILES="${FILES} $BASEPATH/src/loadmod.c"
-#fi
-
 #if [ -f "/etc/arch-release" ]; then
 #	SHARED="no"
 #fi

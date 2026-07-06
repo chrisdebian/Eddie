@@ -57,7 +57,7 @@ protected:
 	virtual std::vector<char> FsFileReadBytes(const std::string& path);
 	virtual std::vector<std::string> FsFilesInPath(const std::string& path);
 	virtual std::string FsGetTempPath();
-	virtual std::string GetStagingDir();
+	virtual std::string GetPrivilegedDataDir();
 	virtual std::vector<std::string> FsGetEnvPath();
 	virtual std::string FsGetRealPath(std::string path);
 	virtual bool FsFileIsExecutable(std::string path);

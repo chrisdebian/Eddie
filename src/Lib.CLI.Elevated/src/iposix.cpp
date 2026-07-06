@@ -83,19 +83,22 @@ void IPosix::Do(const std::string& commandId, const std::string& command, std::m
 		{
 			std::string path = FsLocateExecutable("openvpn", true, true);
 
-			std::string checkResult = CheckValidOpenVpnConfigFile(params["config"]);
+			std::string checkResult = CheckValidOpenVpnConfigContent(params["config"]);
 			if (checkResult != "")
 			{
 				ThrowException("Not supported OpenVPN config: " + checkResult);
 			}
 			else
 			{
+				std::string configPath = FsWriteRootOnlyTempConfig("openvpn", id, "ovpn", params["config"]);
+				try
+				{
 				const pstreams::pmode mode = pstreams::pstdout | pstreams::pstderr;
 				pstreams::argv_type argv;
 				argv.push_back(path);
 
 				argv.push_back("--config");
-				argv.push_back(params["config"]);
+				argv.push_back(configPath);
 
 				std::string openvpnDirectory = FsFileGetDirectory(path);
 				int chdirResult = chdir(openvpnDirectory.c_str()); // AppImage, our openvpn look ./ for .so
@@ -160,6 +163,13 @@ void IPosix::Do(const std::string& commandId, const std::string& command, std::m
 
 				std::string exitCodeStr = std::to_string(exitCode);
 				ReplyCommand(commandId, "return:" + exitCodeStr);
+				}
+				catch (...)
+				{
+					FsFileDelete(configPath);
+					throw;
+				}
+				FsFileDelete(configPath);
 			}
 		}
 	}
@@ -182,17 +192,20 @@ void IPosix::Do(const std::string& commandId, const std::string& command, std::m
 		{
 			std::string path = FsLocateExecutable("hummingbird", true, true);
 
-			// Workaround. In any case, hummingbird called from Eddie don't perform any action that need a recovery.
+			// Intentional: remove stale lock before start; Eddie-managed Hummingbird does not use HB recovery.
 			if (FsFileExists("/etc/airvpn/hummingbird.lock"))
 				FsFileDelete("/etc/airvpn/hummingbird.lock");
 
-			std::string checkResult = CheckValidHummingbirdConfigFile(params["config"]);
+			std::string checkResult = CheckValidOpenVpnConfigContent(params["config"]);
 			if (checkResult != "")
 			{
 				ThrowException("Not supported Hummingbird config: " + checkResult);
 			}
 			else
 			{
+				std::string configPath = FsWriteRootOnlyTempConfig("hummingbird", id, "ovpn", params["config"]);
+				try
+				{
 				const pstreams::pmode mode = pstreams::pstdout | pstreams::pstderr;
 				pstreams::argv_type argv;
 				argv.push_back(path);
@@ -213,7 +226,7 @@ void IPosix::Do(const std::string& commandId, const std::string& command, std::m
 					argv.push_back(params["gui-version"]);
 				}
 
-				argv.push_back(params["config"]);
+				argv.push_back(configPath);
 
 				pstream child(argv, mode);
 				char buf[1024 * 32];
@@ -268,6 +281,13 @@ void IPosix::Do(const std::string& commandId, const std::string& command, std::m
 
 				std::string exitCodeStr = std::to_string(exitCode);
 				ReplyCommand(commandId, "return:" + exitCodeStr);
+				}
+				catch (...)
+				{
+					FsFileDelete(configPath);
+					throw;
+				}
+				FsFileDelete(configPath);
 			}
 		}
 	}
@@ -999,9 +1019,9 @@ std::string IPosix::GetDevLogPath()
 	return "/tmp/eddie-elevated.log";
 }
 
-std::string IPosix::GetStagingDir()
+std::string IPosix::GetPrivilegedDataDir()
 {
-	return "/run/eddie-vpn/stage";
+	return "/run/eddie-vpn";
 }
 
 std::string IPosix::StringEnsureInterfaceName(const std::string& str)

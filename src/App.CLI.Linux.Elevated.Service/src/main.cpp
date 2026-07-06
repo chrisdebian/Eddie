@@ -283,6 +283,7 @@ int main(int argc, char* argv[])
 		
 		if (securityHashesStored != securityHashesComputed)
 		{
+			// Intentional: remove broken/orphan service before failing startup.
 			cleanService();
 			throw std::runtime_error(messageNotAllowed + " (check fail)");
 		}
@@ -307,7 +308,9 @@ int main(int argc, char* argv[])
 			int status;
 			waitpid(pid, &status, 0);			
 			
-			return WIFEXITED(status);
+			if (WIFEXITED(status))
+				return WEXITSTATUS(status);
+			return 1;
 		} 
 		else 
 		{

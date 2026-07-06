@@ -7,11 +7,11 @@ set -euo pipefail
 #}
 #SCRIPTDIR=$(dirname $(realpath "$0"))
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd -P)"
-FILEPACKAGE=$1
+FILEPACKAGE=${1-}
 
 if test -f "${EDDIESIGNINGDIR}/eddie.website_deploy.key"; then # Staff AirVPN
 
-    REMOTEDIR=$2
+    REMOTEDIR=${2-}
     if [[ ${REMOTEDIR} == "internal" ]]; then 
         REMOTEDIR=/opt/repository/eddie/internal
     fi

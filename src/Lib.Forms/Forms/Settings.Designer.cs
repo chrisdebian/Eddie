@@ -58,7 +58,6 @@ namespace Eddie.Forms.Forms
 			this.chkAdvancedCheckRoute = new Eddie.Forms.Skin.CheckBox();
 			this.chkExpert = new Eddie.Forms.Skin.CheckBox();
 			this.chkOpenVpnDirectivesDataCiphersChaCha = new Eddie.Forms.Skin.CheckBox();
-			this.chkOpenVpnDirectivesAllowScriptSecurity = new Eddie.Forms.Skin.CheckBox();
 			this.cmdOpenVpnDirectivesCustomPathBrowse = new Eddie.Forms.Skin.Button();
 			this.txtOpenVpnDirectivesCustomPath = new Eddie.Forms.Skin.TextBox();
 			this.label8 = new Eddie.Forms.Skin.Label();
@@ -592,7 +591,6 @@ namespace Eddie.Forms.Forms
 			// 
 			tabDirectives.BackColor = System.Drawing.Color.White;
 			tabDirectives.Controls.Add(this.chkOpenVpnDirectivesDataCiphersChaCha);
-			tabDirectives.Controls.Add(this.chkOpenVpnDirectivesAllowScriptSecurity);
 			tabDirectives.Controls.Add(this.cmdOpenVpnDirectivesCustomPathBrowse);
 			tabDirectives.Controls.Add(this.txtOpenVpnDirectivesCustomPath);
 			tabDirectives.Controls.Add(this.label8);
@@ -622,19 +620,6 @@ namespace Eddie.Forms.Forms
 			this.chkOpenVpnDirectivesDataCiphersChaCha.TabIndex = 93;
 			this.chkOpenVpnDirectivesDataCiphersChaCha.Text = "Prefer CHACHA20-POLY1305 data cipher if available";
 			this.chkOpenVpnDirectivesDataCiphersChaCha.UseVisualStyleBackColor = false;
-			// 
-			// chkOpenVpnDirectivesAllowScriptSecurity
-			// 
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.chkOpenVpnDirectivesAllowScriptSecurity.BackColor = System.Drawing.Color.Transparent;
-			this.chkOpenVpnDirectivesAllowScriptSecurity.ForeColor = System.Drawing.Color.Black;
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Location = new System.Drawing.Point(568, 530);
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Margin = new System.Windows.Forms.Padding(4);
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Name = "chkOpenVpnDirectivesAllowScriptSecurity";
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Size = new System.Drawing.Size(425, 31);
-			this.chkOpenVpnDirectivesAllowScriptSecurity.TabIndex = 92;
-			this.chkOpenVpnDirectivesAllowScriptSecurity.Text = "Allow script-security directives";
-			this.chkOpenVpnDirectivesAllowScriptSecurity.UseVisualStyleBackColor = false;
 			// 
 			// cmdOpenVpnDirectivesCustomPathBrowse
 			// 
@@ -3311,7 +3296,6 @@ namespace Eddie.Forms.Forms
 		private Skin.ComboBox cboAdvancedUpdaterChannel;
 		private Skin.Label lblLockAllowDHCP;
 		private Skin.CheckBox chkLockAllowDHCP;
-		private Skin.CheckBox chkOpenVpnDirectivesAllowScriptSecurity;
 		private Skin.Label lblStorageBrowser;
 		private Skin.CheckBox chkStorageBrowser;
 		private Skin.TextBox txtStoragePassword;

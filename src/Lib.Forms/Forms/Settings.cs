@@ -332,9 +332,6 @@ namespace Eddie.Forms.Forms
 			cboWireGuardMTU.Items.Add("1280");
 
 			// Advances
-			
-			// Disabled in this version
-			chkOpenVpnDirectivesAllowScriptSecurity.Visible = false;
 
 			// Init
 
@@ -703,7 +700,6 @@ namespace Eddie.Forms.Forms
 			txtOpenVpnDirectivesBase.Text = o.Get("openvpn.directives");
 			txtOpenVpnDirectivesCustom.Text = o.Get("openvpn.custom");
 			txtOpenVpnDirectivesCustomPath.Text = o.Get("openvpn.directives.path");
-			//chkOpenVpnDirectivesAllowScriptSecurity.Checked = o.GetBool("openvpn.allow.script-security");
 			chkOpenVpnDirectivesDataCiphersChaCha.Checked = o.GetBool("openvpn.directives.chacha20");
 
 			// Advanced - WireGuard
@@ -1092,7 +1088,6 @@ namespace Eddie.Forms.Forms
 			o.Set("openvpn.custom", txtOpenVpnDirectivesCustom.Text);
 			o.Set("openvpn.directives.path", txtOpenVpnDirectivesCustomPath.Text);
 			o.SetBool("openvpn.skip_defaults", (cboOpenVpnDirectivesDefaultSkip.SelectedIndex == 1));
-			//o.SetBool("openvpn.allow.script-security", chkOpenVpnDirectivesAllowScriptSecurity.Checked);
 
 			o.SetBool("openvpn.directives.chacha20", chkOpenVpnDirectivesDataCiphersChaCha.Checked);
 

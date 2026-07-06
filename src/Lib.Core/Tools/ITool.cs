@@ -99,15 +99,6 @@ namespace Eddie.Core.Tools
 			if (Location == "system")
 				return Path;
 
-			/*
-			string realHash = ComputeHash();
-			if (realHash != Hash)
-			{
-				//Engine.Instance.Logs.Log(LogType.Error, MessagesFormatter.Format("Unexpected hash of executable '{1}': {2} vs {3}", Path, realHash, Hash));
-				return "";
-			}
-			*/
-
 			if (Platform.Instance.FileExists(Path))
 				Platform.Instance.FileEnsureExecutablePermission(Path);
 

@@ -22,8 +22,6 @@ namespace Eddie.Core.Jobs
 {
 	public class ProvidersRefresh : Eddie.Core.Job
 	{
-		public string m_lastVersionNotification = "";
-
 		public override ThreadPriority GetPriority()
 		{
 			return ThreadPriority.Lowest;

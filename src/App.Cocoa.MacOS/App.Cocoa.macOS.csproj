@@ -75,7 +75,6 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ThirdParty.txt" />
-    <EmbeddedResource Include="Resources\TOS.txt" />
     <EmbeddedResource Include="Resources\License.txt" />
     <EmbeddedResource Include="Resources\OpenVPN.xml" />
     <EmbeddedResource Include="Resources\AirVPN.xml" />
@@ -513,11 +512,6 @@
       <DependentUpon>WindowPreferences.cs</DependentUpon>
     </Compile>
     <Compile Include="Engine.cs" />
-    <Compile Include="WindowTos.cs" />
-    <Compile Include="WindowTosController.cs" />
-    <Compile Include="WindowTos.designer.cs">
-      <DependentUpon>WindowTos.cs</DependentUpon>
-    </Compile>
     <Compile Include="WindowFrontMessage.cs" />
     <Compile Include="WindowFrontMessageController.cs" />
     <Compile Include="WindowFrontMessage.designer.cs">
@@ -641,7 +635,6 @@
     <InterfaceDefinition Include="MainMenu.xib" />
     <InterfaceDefinition Include="WindowAbout.xib" />
     <InterfaceDefinition Include="WindowPreferences.xib" />
-    <InterfaceDefinition Include="WindowTos.xib" />
     <InterfaceDefinition Include="WindowFrontMessage.xib" />
     <InterfaceDefinition Include="WindowTextViewer.xib" />
     <InterfaceDefinition Include="WindowPreferencesRoute.xib" />

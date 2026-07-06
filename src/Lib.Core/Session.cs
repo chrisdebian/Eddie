@@ -186,7 +186,7 @@ namespace Eddie.Core
 								}
 								catch (Exception ex)
 								{
-									// Note: If failed, continue anyway.
+									// Intentional: continue session if authorize connect fails.
 									Engine.Logs.Log(LogType.Verbose, LanguageManager.GetText(LanguageItems.AuthorizeConnectFailed, ex.Message));
 								}
 
@@ -545,7 +545,7 @@ namespace Eddie.Core
 
 		public void SetReset(string level)
 		{
-			// 2.11.8
+			// Intentional: first non-empty reset level wins.
 			if (level == "")
 				m_reset = "";
 			else if (m_reset == "")

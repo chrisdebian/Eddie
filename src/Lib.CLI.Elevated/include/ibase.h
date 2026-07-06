@@ -99,6 +99,8 @@ private:
 	bool m_singleConnMode = false;
 	Pinger m_pinger;
 	std::string m_stagingDir;
+	std::string m_runtimeDir;
+	std::string m_stateDir;
 
 protected:
 	std::map<std::string, std::string> m_cmdline;
@@ -131,6 +133,11 @@ private:
 	void ReplyException(const std::string& id, const std::string& message);
 	void EndCommand(const std::string& id);
 	void SendMessage(const std::string& message);
+	void EnsureRuntimeDirReady();
+	void EnsureStateDirReady();
+	void StagingCleanup();
+	void RuntimeCleanup();
+	void StateCleanup();
 
 	// Virtual
 protected:
@@ -159,11 +166,33 @@ protected:
 	bool IsSecureServiceLocation(const std::string& path);
 	bool CanUseDirectPath(const std::string& path);
 
-	// Runtime staging: when the elevated executable lives in a non-root-only directory
-	// (portable layout), privileged tools are copied once into a root-only directory and
-	// run from there, closing the writable-path TOCTOU window. No-op when CanUseDirectPath.
+	// Root-only machine-wide data directory (stage/, run/, state/ are subdirs).
+	// OS-specific: /var/lib/eddie-vpn (Linux), /var/run/eddie-vpn (macOS), C:\ProgramData\Eddie-VPN (Windows).
 	bool StagingPrepare();
-	void StagingCleanup();
+	void PrivilegedDataCleanup();
+
+	std::string GetStagingDir();
+
+	// Dedicated root-only directory for persistent privileged data (e.g. network lock rule
+	// backups). Distinct from run/ (purged on startup) and from the system temp. Created and
+	// secured root-only; contents survive elevated restarts until explicitly removed.
+	std::string GetStateDir();
+	bool StatePrepare();
+
+	// Dedicated root-only directory for transient privileged files (e.g. the OpenVPN config
+	// materialized from the body received over IPC). Distinct from the system temp (world-writable)
+	// and from the install directory. Created and secured root-only; purged on startup and removed
+	// on shutdown so nothing survives a connection or a crash.
+	std::string GetRuntimeDir();
+	bool RuntimePrepare();
+
+	// Transient files in the dedicated root-only runtime directory (see GetRuntimeDir).
+	// Predictable names are safe: unprivileged users cannot access a root-only directory.
+	std::string FsRuntimeTempPath(const std::string& filename);
+	std::string FsWriteRootOnlyRuntimeFile(const std::string& filename, const std::string& body);
+
+	std::string FsStatePath(const std::string& filename);
+	std::string FsWriteRootOnlyStateFile(const std::string& filename, const std::string& body);
 
 	virtual std::string GetProcessPathCurrent();
 	virtual std::string GetProcessPathCurrentDir();
@@ -203,7 +232,7 @@ protected:
 	virtual std::vector<char> FsFileReadBytes(const std::string& path) = 0;
 	virtual std::vector<std::string> FsFilesInPath(const std::string& path) = 0;
 	virtual std::string FsGetTempPath() = 0;
-	virtual std::string GetStagingDir() = 0;
+	virtual std::string GetPrivilegedDataDir() = 0;
 	virtual std::vector<std::string> FsGetEnvPath() = 0;
 	virtual std::string FsGetRealPath(std::string path) = 0;
 	virtual bool FsFileIsExecutable(std::string path) = 0;
@@ -235,7 +264,6 @@ protected:
 	virtual std::string SystemWideDataGet(const std::string& key, const std::string& def) = 0;
 	virtual bool SystemWideDataDel(const std::string& key) = 0;
 	virtual bool SystemWideDataClean() = 0;
-	virtual std::string CheckIfClientPathIsAllowed(const std::string& path) = 0;
 	virtual std::string CheckExecutablePathPermissions(const std::string& path) = 0;
 #ifndef EDDIE_IPC_LOCAL
 	// Legacy TCP transport only: peer PID resolved by scanning the OS socket table.
@@ -288,7 +316,6 @@ protected:
 	std::string StringSHA256(const std::string& str);
 	bool StringIsIPv4(const std::string& ip);
 	bool StringIsIPv6(const std::string& ip);
-	std::string StringIpNormalize(const std::string& ip);
 	std::string StringIpRemoveInterface(const std::string& ip);
 
 	// Utils JSON (avoid library until our usage keep simple)
@@ -301,8 +328,14 @@ protected:
 	std::map<std::string, std::string> IniConfigToMap(const std::string& ini, std::string sectionKeySeparator = ".", bool convertKeyToLower = true);
 	std::map<std::string, std::string> ParseCommandLine(const std::vector<std::string>& args);
 	std::string CheckValidOpenVpnConfigFile(const std::string& path);
+	std::string CheckValidOpenVpnConfigContent(const std::string& body);
 	std::string CheckValidHummingbirdConfigFile(const std::string& path);
 	std::string CheckValidWireGuardConfig(const std::string& config);
+
+	// Materialize a config received over IPC into the dedicated root-only runtime directory and
+	// return its path. Fail-closed: throws if the runtime directory cannot be secured. The caller
+	// is responsible for deleting the returned file when done.
+	std::string FsWriteRootOnlyTempConfig(const std::string& prefix, const std::string& id, const std::string& ext, const std::string& body);
 	void PidAdd(pid_t pid);
 	void PidRemove(pid_t pid);
 	bool PidManaged(pid_t pid);

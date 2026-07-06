@@ -258,74 +258,84 @@ void IWindows::Do(const std::string& commandId, const std::string& command, std:
 			std::string path = FsLocateExecutable("openvpn.exe", true, true);
 			std::string config = params["config"];
 
-			std::string checkResult = CheckValidOpenVpnConfigFile(config);
+			std::string checkResult = CheckValidOpenVpnConfigContent(config);
 			if (checkResult != "")
 			{
 				ThrowException("Not supported OpenVPN config: " + checkResult);
 			}
 			else
 			{
-				std::vector<std::string> args;
-
-				args.push_back("--config");
-				args.push_back(params["config"]);
-
-				t_shellinfo info = ExecStart(path, args);
-
-				if (info.lastErrorCode != 0)
-					ThrowException(info.lastError);
-
-				m_keypair["openvpn_pid_" + id] = std::to_string(info.pid);				
-				ReplyCommand(commandId, "procid:" + std::to_string(info.pid));
-
-				for (;;)
+				std::string configPath = FsWriteRootOnlyTempConfig("openvpn", id, "ovpn", config);
+				try
 				{
-					DWORD bytes_read = 0;
-					char tBuf[4096];
+					std::vector<std::string> args;
 
-					bool stderrEnd = false;
-					bool stdoutEnd = false;
+					args.push_back("--config");
+					args.push_back(configPath);
 
+					t_shellinfo info = ExecStart(path, args);
+
+					if (info.lastErrorCode != 0)
+						ThrowException(info.lastError);
+
+					m_keypair["openvpn_pid_" + id] = std::to_string(info.pid);				
+					ReplyCommand(commandId, "procid:" + std::to_string(info.pid));
+
+					for (;;)
 					{
-						// Don't yet know why, but seem hang with stderr (openvpn only). Doesn't seem really matter.
-						stderrEnd = true;
-						/*
-						// stderr
-						if (!ReadFile(info.stderrReadHandle, tBuf, 4096 - 1, &bytes_read, NULL))
+						DWORD bytes_read = 0;
+						char tBuf[4096];
+
+						bool stderrEnd = false;
+						bool stdoutEnd = false;
+
 						{
-							//printf("ReadFile: %u %s\n", GetLastError(), GetLastErrorAsString().c_str());
+							// Don't yet know why, but seem hang with stderr (openvpn only). Doesn't seem really matter.
 							stderrEnd = true;
+							/*
+							// stderr
+							if (!ReadFile(info.stderrReadHandle, tBuf, 4096 - 1, &bytes_read, NULL))
+							{
+								//printf("ReadFile: %u %s\n", GetLastError(), GetLastErrorAsString().c_str());
+								stderrEnd = true;
+							}
+							if (bytes_read > 0)
+							{
+								tBuf[bytes_read] = '\0';
+								ReplyCommand(commandId, "stderr:" + std::string(tBuf));
+							}
+							*/
 						}
-						if (bytes_read > 0)
+
 						{
-							tBuf[bytes_read] = '\0';
-							ReplyCommand(commandId, "stderr:" + std::string(tBuf));
+							// stdout
+							if (!ReadFile(info.stdoutReadHandle, tBuf, 4096 - 1, &bytes_read, NULL))
+							{
+								//printf("ReadFile: %u %s\n", GetLastError(), GetLastErrorAsString().c_str());
+								stdoutEnd = true;
+							}
+							if (bytes_read > 0)
+							{
+								tBuf[bytes_read] = '\0';
+								ReplyCommand(commandId, "stdout:" + std::string(tBuf));
+							}
+
+							if ((stderrEnd) && (stdoutEnd))
+								break;
 						}
-						*/
 					}
 
-					{
-						// stdout
-						if (!ReadFile(info.stdoutReadHandle, tBuf, 4096 - 1, &bytes_read, NULL))
-						{
-							//printf("ReadFile: %u %s\n", GetLastError(), GetLastErrorAsString().c_str());
-							stdoutEnd = true;
-						}
-						if (bytes_read > 0)
-						{
-							tBuf[bytes_read] = '\0';
-							ReplyCommand(commandId, "stdout:" + std::string(tBuf));
-						}
-
-						if ((stderrEnd) && (stdoutEnd))
-							break;
-					}
-				}
-
-				m_keypair.erase("openvpn_pid_" + id);
+					m_keypair.erase("openvpn_pid_" + id);
 				
-				int exitCode = ExecEnd(info);
-				ReplyCommand(commandId, "return:" + std::to_string(exitCode));
+					int exitCode = ExecEnd(info);
+					ReplyCommand(commandId, "return:" + std::to_string(exitCode));
+				}
+				catch (...)
+				{
+					FsFileDelete(configPath);
+					throw;
+				}
+				FsFileDelete(configPath);
 			}
 		}
 	}
@@ -851,7 +861,6 @@ bool IWindows::ServiceInstall()
 
 	if (success)
 	{
-		LogLocal("Service installed");
 		LogRemote("Service installed");
 	}
 
@@ -864,7 +873,6 @@ bool IWindows::ServiceUninstall()
 	{
 		IntegrityCheckClean("service");
 
-		LogLocal("Service uninstalled");
 		LogRemote("Service uninstalled");
 
 		wchar_t systemDirectory[MAX_PATH];
@@ -1342,12 +1350,12 @@ std::string IWindows::FsGetTempPath()
 	return StringWStringToUTF8(path);
 }
 
-std::string IWindows::GetStagingDir()
+std::string IWindows::GetPrivilegedDataDir()
 {
 	WCHAR programData[MAX_PATH];
 	DWORD len = ::GetEnvironmentVariableW(L"ProgramData", programData, MAX_PATH);
 	std::string base = (len > 0 && len < MAX_PATH) ? StringWStringToUTF8(programData) : "C:\\ProgramData";
-	return base + "\\Eddie-VPN\\stage";
+	return base + "\\Eddie-VPN";
 }
 
 std::vector<std::string> IWindows::FsGetEnvPath()
@@ -1887,54 +1895,6 @@ bool IWindows::SystemWideDataDel(const std::string& key)
 bool IWindows::SystemWideDataClean()
 {
 	return (RegDeleteKeyW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Eddie-VPN") == ERROR_SUCCESS);
-}
-
-std::string IWindows::CheckIfClientPathIsAllowed(const std::string& path)
-{	
-	/*
-	// MacOS have equivalent.
-	// Linux don't have any signature check (and can't have, because in distro like Arch, binary are builded client-side from sources
-	// This is probably a superfluous check, and can cause issue for who compile from sources.
-	// If implemented, need a conversion from C# to C++ of the code below.
-	// Not yet implemented, redundant.
-
-	// Check signature (optional)
-	{
-		try
-		{
-			System.Security.Cryptography.X509Certificates.X509Certificate c1 = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(System.Reflection.Assembly.GetEntryAssembly().Location);
-
-			// If above don't throw exception, Elevated it's signed, so it's mandatory that client is signed from same subject.
-			try
-			{
-				System.Security.Cryptography.X509Certificates.X509Certificate c2 = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(clientPath);
-
-				bool match = (
-					(c1.Issuer == c2.Issuer) &&
-					(c1.Subject == c2.Subject) &&
-					(c1.GetCertHashString() == c2.GetCertHashString()) &&
-					(c1.GetEffectiveDateString() == c2.GetEffectiveDateString()) &&
-					(c1.GetPublicKeyString() == c2.GetPublicKeyString()) &&
-					(c1.GetRawCertDataString() == c2.GetRawCertDataString()) &&
-					(c1.GetSerialNumberString() == c2.GetSerialNumberString())
-					);
-
-				if (match == false)
-					return "Client not allowed: digital signature mismatch";
-			}
-			catch (Exception)
-			{
-				return "Client not allowed: digital signature not available";
-			}
-		}
-		catch (Exception)
-		{
-			// Not signed, but maybe compiled from source, it's an optional check.
-		}
-	}
-	*/
-
-	return "ok";
 }
 
 std::string IWindows::CheckExecutablePathPermissions(const std::string& path)

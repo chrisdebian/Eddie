@@ -16,8 +16,6 @@
 // along with Eddie. If not, see <http://www.gnu.org/licenses/>.
 // </eddie_source_header>
 
-// Automatically generated
-
 namespace Eddie.Core
 {
 	public enum LanguageItems
@@ -576,11 +574,6 @@ namespace Eddie.Core
 		WindowsSettingsUiUnit0,
 		WindowsSettingsUiUnit1,
 		WindowsSettingsUiUnit2,
-		WindowsTosAccept,
-		WindowsTosCheck1,
-		WindowsTosCheck2,
-		WindowsTosReject,
-		WindowsTosTitle,
 		WindowsUnlockFailedAuth,
 		WindowsUnlockFirstAuth,
 		WindowsUnlockTitle,

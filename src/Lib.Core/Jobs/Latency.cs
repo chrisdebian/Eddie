@@ -271,13 +271,6 @@ namespace Eddie.Core.Jobs
 			m_needBroadcast = true;
 		}
 
-		void OnPingCompleted(object sender, PingCompletedEventArgs e)
-		{
-			ConnectionInfo infoServer = e.UserState as ConnectionInfo;
-
-			PingResult(infoServer, e.Reply);
-		}
-
 		public bool GetValid()
 		{
 			UpdateStats();

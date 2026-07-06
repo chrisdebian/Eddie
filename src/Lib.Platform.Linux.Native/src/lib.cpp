@@ -166,7 +166,6 @@ extern "C" {
 				std::string postfields = jsonRequest["postfields"];
 				if (postfields != "")
 				{
-					jsonResponse["debug-post"] = jsonRequest["postfields"];
 					curl_easy_setopt(hcurl, CURLOPT_POSTFIELDSIZE, (long)postfields.size());
 					curl_easy_setopt(hcurl, CURLOPT_POSTFIELDS, postfields.c_str());
 				}

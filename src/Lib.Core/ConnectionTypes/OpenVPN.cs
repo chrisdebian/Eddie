@@ -29,7 +29,6 @@ namespace Eddie.Core.ConnectionTypes
 	{
 		protected TemporaryFile m_fileAuthProxy;
 		protected TemporaryFile m_fileAuthPassword;
-		protected TemporaryFile m_fileConfig;
 
 		protected ConfigBuilder.OpenVPN m_configStartup;
 		protected ConfigBuilder.OpenVPN m_configWithPush;
@@ -365,12 +364,6 @@ namespace Eddie.Core.ConnectionTypes
 			base.OnCleanAfterStart();
 
 			// We remove temporary files (that contain sensitive date) as soon as possible.
-
-			if (m_fileConfig != null)
-			{
-				m_fileConfig.Close();
-				m_fileConfig = null;
-			}
 
 			if (m_fileAuthProxy != null)
 			{
@@ -723,7 +716,7 @@ namespace Eddie.Core.ConnectionTypes
 					{
 						string t = messageLower;
 						t = t.Replace("[nonblock]", "").Trim();
-						List<string> fields = t.RegExMatchSingle("\\[af_inet6?\\]([a-z90-9\\.\\:]+?):(\\d+?)$");
+						List<string> fields = t.RegExMatchSingle("\\[af_inet6?\\]([a-z0-9\\.\\:]+?):(\\d+?)$");
 						if ((fields != null) && (fields.Count == 2))
 						{
 							EntryIP = fields[0];
@@ -1141,9 +1134,6 @@ namespace Eddie.Core.ConnectionTypes
 
 		void VpnStartProcess()
 		{
-			m_fileConfig = new TemporaryFile("ovpn");
-			Platform.Instance.FileContentsWriteText(m_fileConfig.Path, m_configStartup.Build(), Encoding.ASCII); // <2.24.3 was UTF8
-
 			if (m_processTransport == null)
 				SetNetworkLockConnectionEndpoint(EntryIP);
 
@@ -1151,7 +1141,7 @@ namespace Eddie.Core.ConnectionTypes
 			m_elevatedCommand.Parameters["command"] = "openvpn";
 			m_elevatedCommand.Parameters["action"] = "start";
 			m_elevatedCommand.Parameters["id"] = Id;
-			m_elevatedCommand.Parameters["config"] = Platform.Instance.FileGetPhysicalPath(m_fileConfig.Path);
+			m_elevatedCommand.Parameters["config"] = m_configStartup.Build();
 			OverrideElevatedCommandParameters();
 
 			m_elevatedCommand.ExceptionEvent += delegate (Elevated.Command cmd, string message)
@@ -1245,8 +1235,7 @@ namespace Eddie.Core.ConnectionTypes
 				arguments += " -P"; // plink use -P
 			arguments += " " + EntryPort;
 
-			// TOOPTIMIZE: To bypass key confirmation. Not the best approach.
-			// TOFIX: Maybe provide a UserKnownHostsFile...
+			// Intentional: skip SSH host key verification for VPN-over-SSH tunnel.
 			if (fileKeyExtension == "key")
 				arguments += " -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no";
 
@@ -1297,6 +1286,7 @@ namespace Eddie.Core.ConnectionTypes
 			if (Engine.Instance.ProfileOptions.Get("ssl.options") != "")
 				sslConfig += "options = " + Engine.Instance.ProfileOptions.Get("ssl.options") + "\n";
 			sslConfig += "client = yes\n";
+			// Intentional: verbose STunnel debug for SSL transport troubleshooting.
 			sslConfig += "debug = 6\n";
 			if (Platform.Instance.IsUnixSystem())
 				sslConfig += "pid = " + Engine.Instance.GetPathInData("stunnel.pid"); // Added 2.18.3. Note: don't like quoted path

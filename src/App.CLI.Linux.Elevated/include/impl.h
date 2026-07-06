@@ -34,13 +34,12 @@ protected:
 	virtual bool ServiceUninstall();
 
 	virtual std::string SystemWideDataPath();
-	virtual std::string CheckIfClientPathIsAllowed(const std::string& path);
 
 	// Virtual Pure, OS
 protected:
 	virtual std::string GetProcessPathCurrent();
 	virtual std::string GetProcessPathOfId(int pid);
-	virtual std::string GetStagingDir();
+	virtual std::string GetPrivilegedDataDir();
 #ifdef EDDIE_IPC_UNIXSOCKET
 	virtual int GetSocketPeerPid(HSOCKET s);
 #endif
@@ -54,10 +53,6 @@ private:
 	std::string IptablesExec(const std::string& path, const std::vector<std::string>& args, const bool stdinWrite, const std::string stdinBody);
 	std::string NftablesSearchHandle(const std::string& rulesList, const std::string& comment);
 	std::string GetRoutesAsJson();
-	std::string GetRoutesAsJsonNew();
-	std::string GetRoutesAsJsonHexAddress2string(const std::string& v);
-	int GetRoutesAsJsonConvertMaskToCidrNetMask(const std::string& v);
-	int GetRoutesAsJsonConvertHexPrefixToCidrNetMask(const std::string& v);
 	void NetworkManagerSetInterfaceUnmanaged(const std::string& interfaceId);
 	unsigned long WireGuardLastHandshake(const std::string& interfaceId);
 	void WireGuardParseAllowedIPs(const char *allowed_ips, wg_peer *peer);

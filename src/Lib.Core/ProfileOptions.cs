@@ -495,9 +495,9 @@ namespace Eddie.Core
 
 			SetDefaultInt("http.timeout", 10, LanguageManager.GetText(LanguageItems.ManOptionHttpTimeout));
 
-			SetDefaultBool("webui.enabled", true, NotInManYet); // WebUI it's a Eddie 3.* feature not yet committed on GitHub.
-			SetDefault("webui.ip", "text", "localhost", NotInManYet);
+			SetDefaultBool("webui.enabled", false, NotInManYet); // WebUI it's a Eddie 3.* feature not yet committed on GitHub.
 			SetDefaultInt("webui.port", 4649, NotInManYet);
+			SetDefault("webui.access_key", "password", "", NotInManYet); // Auto-generated on first WebServer start; required to authenticate against /api/*.
 
 			SetDefault("openvpn.custom", "text", "", LanguageManager.GetText(LanguageItems.ManOptionOpenVpnCustom));
 			SetDefault("openvpn.dev_node", "text", "", LanguageManager.GetText(LanguageItems.ManOptionOpenVpnDevNode));
@@ -609,6 +609,16 @@ namespace Eddie.Core
 			m_options["gui.list.servers"].InternalOnly = true;
 			m_options["gui.list.areas"].InternalOnly = true;
 			m_options["gui.list.logs"].InternalOnly = true;
+			m_options["webui.access_key"].InternalOnly = true;
+
+			// Secret: value redacted toward untrusted UI clients (see WebserverClient)
+			m_options["password"].Secret = true;
+			m_options["proxy.password"].Secret = true;
+			m_options["proxy.tor.control.password"].Secret = true;
+			m_options["webui.access_key"].Secret = true;
+
+			// Don't clean with user Reset All (would lock out active WebServer sessions)
+			m_options["webui.access_key"].DontUserReset = true;
 
 			// Omissis
 			m_options["login"].Omissis = true;

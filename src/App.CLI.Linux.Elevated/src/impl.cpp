@@ -36,14 +36,6 @@
 
 #include <sstream>
 
-/*
-// Eddie 2.19.3, some users report issue with zfs compression
-
-#ifndef EDDIE_NOLZMA
-#include "loadmod.h"
-#endif 
-*/
-
 #include "../include/impl.h"
 
 // --------------------------
@@ -80,56 +72,29 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 		if (pidSystemD != 0)
 		{
-			std::string servicePath = FsLocateExecutable("service");
-			std::string systemctlPath = FsLocateExecutable("systemctl");
+			std::string systemctlPath = FsLocateExecutable("systemctl", false);
 
-			if ((servicePath != "") && (systemctlPath != ""))
+			if (systemctlPath != "")
 			{
 				for (std::vector<std::string>::const_iterator iS = services.begin(); iS != services.end(); ++iS)
 				{
 					std::string service = StringEnsureAsciiName(*iS);
 					if (!service.empty())
 					{
-						if (ExecEx(FsLocateExecutable("systemctl"), { "is-active", "--quiet", service }).exit == 0)
+						if (ExecEx(systemctlPath, { "is-active", "--quiet", service }).exit == 0)
 						{
-							LogRemote("Flush DNS - " + service + " restart via systemctl");
-							ExecEx(servicePath, { StringEnsureFileName(service), "restart" });
+							LogRemote("Flush DNS - " + service + " restarted via systemctl");
+							ExecEx(systemctlPath, { "restart", service });
 							restarted[service] = 1;
 						}
 					}
 				}
-
-				/* < 2.23.0
-				ExecResult systemCtlListUnits = ExecEx(systemctlPath, { "list-units", "--no-pager" });
-				if (systemCtlListUnits.exit != 0)
-				{
-					std::vector<std::string> lines = StringToVector(systemCtlListUnits.out, '\n');
-					for (std::vector<std::string>::const_iterator l = lines.begin(); l != lines.end(); ++l)
-					{
-						std::string line = *l;
-						for (std::vector<std::string>::const_iterator iS = services.begin(); iS != services.end(); ++iS)
-						{
-							std::string service = *iS;
-							if (restarted.find(service) != restarted.end())
-								continue;
-							if (StringStartsWith(line, service + ".service") == false)
-								continue;
-							if (StringContain(line, " running ") == false)
-								continue;
-
-							LogRemote("Flush DNS - " + service + " via systemd restart");
-							ExecEx(servicePath, { StringEnsureFileName(service), "restart" });
-							restarted[service] = 1;
-						}
-					}
-				}
-				*/
 			}
 
 			// systemd-resolved
 			if(m_hasSystemdResolved)
 			{
-				std::string resolvectlPath = FsLocateExecutable("resolvectl");
+				std::string resolvectlPath = FsLocateExecutable("resolvectl", false);
 				if (resolvectlPath != "")
 				{
 					LogRemote("Flush DNS - systemd-resolved flush-caches");
@@ -312,7 +277,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 				for (std::vector<std::string>::const_iterator iDns = dns.begin(); iDns != dns.end(); ++iDns)
 				{
-					resolvConfExpected += "nameserver " + (*iDns) + "\n";
+					resolvConfExpected += "nameserver " + StringEnsureIpAddress(*iDns) + "\n";
 				}
 				resolvConfExpected += "\n\n";
 				
@@ -336,6 +301,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 					if (FsFileWriteText("/etc/resolv.conf", resolvConfExpected) == false)
 						ThrowException("resolv.conf write fail");
+					// Intentional: world-readable resolv.conf (644) — required for system-wide DNS resolution.
 					chmod("/etc/resolv.conf", S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
 					LogRemote("DNS of the system switched to VPN DNS - via /etc/resolv.conf");
@@ -360,17 +326,14 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 			success = true;			
 		}
 		
-		if (ExecEx(FsLocateExecutable("systemctl"), { "is-active", "--quiet", "systemd-resolved" }).exit == 0) // systemd-resolved active
+		std::string systemctlPath = FsLocateExecutable("systemctl", false);
+		if (systemctlPath != "" && ExecEx(systemctlPath, { "is-active", "--quiet", "systemd-resolved" }).exit == 0) // systemd-resolved active
 		{
 			// First, restart, otherwise don't see the resolv.conf switch
-			std::string servicePath = FsLocateExecutable("service");
-			if(servicePath != "")
-			{
-				ExecEx(servicePath, { StringEnsureFileName("systemd-resolved"), "restart" });
-				LogRemote("Service systemd-resolved restarted");
-			}
+			ExecEx(systemctlPath, { "restart", "systemd-resolved" });
+			LogRemote("systemd-resolved restarted via systemctl");
 
-			std::string resolvectlPath = FsLocateExecutable("resolvectl");
+			std::string resolvectlPath = FsLocateExecutable("resolvectl", false);
 			if (resolvectlPath != "")
 			{
 				struct if_nameindex *ifndx, *iface;
@@ -569,7 +532,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 		std::string nft = FsLocateExecutable("nft");
 
-		std::string pathBackup = GetTempPath("netlock_nftables_backup.nft");
+		std::string pathBackup = FsStatePath("netlock_nftables_backup.nft");
 
 		std::string result = "";
 
@@ -586,11 +549,10 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 			if (execResultBackup.exit != 0)
 				ThrowException("nft issue: " + GetExecResultReport(execResultBackup));
 
-			FsFileWriteText(pathBackup, execResultBackup.out);
+			FsWriteRootOnlyStateFile("netlock_nftables_backup.nft", execResultBackup.out);
 
 			// Apply new
-			std::string path = GetTempPath("netlock_nftables_apply.nft");
-			FsFileWriteText(path, params["rules"]);
+			std::string path = FsWriteRootOnlyRuntimeFile("netlock_nftables_apply.nft", params["rules"]);
 			ExecResult execResultApply = ExecEx(nft, { "-f", path });
 			FsFileDelete(path);
 			if (execResultApply.exit != 0)
@@ -602,7 +564,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 	else if (command == "netlock-nftables-deactivate")
 	{
 		std::string nft = FsLocateExecutable("nft");
-		std::string path = GetTempPath("netlock_nftables_backup.nft");
+		std::string path = FsStatePath("netlock_nftables_backup.nft");
 
 		if (FsFileExists(path))
 		{
@@ -1003,8 +965,8 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 	{
 		std::string compatibility = params["compatibility"];
 
-		std::string pathIPv4 = GetTempPath("netlock_iptables_backup_ipv4.txt");
-		std::string pathIPv6 = GetTempPath("netlock_iptables_backup_ipv6.txt");
+		std::string pathIPv4 = FsStatePath("netlock_iptables_backup_ipv4.txt");
+		std::string pathIPv6 = FsStatePath("netlock_iptables_backup_ipv6.txt");
 		
 		std::string result = "";
 
@@ -1022,14 +984,14 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 				std::string backupIPv4 = IptablesExec(IptablesExecutable(compatibility, "ipv4", "save"), args, false, "");
 				if (StringContain(backupIPv4, "*filter") == false)
 					ThrowException("iptables don't reply, probably kernel modules issue");
-				FsFileWriteText(pathIPv4, backupIPv4);
+				FsWriteRootOnlyStateFile("netlock_iptables_backup_ipv4.txt", backupIPv4);
 			}
 			if (params.count("rules-ipv6") > 0)
 			{
 				std::string backupIPv6 = IptablesExec(IptablesExecutable(compatibility, "ipv6", "save"), args, false, "");
 				if (StringContain(backupIPv6, "*filter") == false)
 					ThrowException("ip6tables don't reply, probably kernel modules issue");
-				FsFileWriteText(pathIPv6, backupIPv6);
+				FsWriteRootOnlyStateFile("netlock_iptables_backup_ipv6.txt", backupIPv6);
 			}
 			
 			// Apply new
@@ -1045,8 +1007,8 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 	{
 		std::string compatibility = params["compatibility"];
 
-		std::string pathIPv4 = GetTempPath("netlock_iptables_backup_ipv4.txt");
-		std::string pathIPv6 = GetTempPath("netlock_iptables_backup_ipv6.txt");
+		std::string pathIPv4 = FsStatePath("netlock_iptables_backup_ipv4.txt");
+		std::string pathIPv6 = FsStatePath("netlock_iptables_backup_ipv6.txt");
 
 		std::string result = "";
 
@@ -1235,8 +1197,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 	}
 	else if (command == "route-list")
 	{
-		// TODO: WIP on GetRoutesAsJsonNew and replace
-
 		std::string json = GetRoutesAsJson();
 
 		ReplyCommand(commandId, json);
@@ -1331,6 +1291,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 					ReplyCommand(commandId, "log:setup-start");
 
+					// Intentional: configure WireGuard via in-kernel UAPI.
 					// Try to delete interface if already exists
 					if (FsDirectoryExists("/proc/sys/net/ipv4/conf/" + interfaceId))
 						ExecEx(ipPath, { "link", "delete", "dev", interfaceId });
@@ -1640,7 +1601,6 @@ bool Impl::ServiceInstall()
 			return false;
 		}
 
-		LogLocal("Service installed");
 		LogRemote("Service installed");
 
 		return true;
@@ -1650,7 +1610,8 @@ bool Impl::ServiceInstall()
 		LogLocal("Can't create service in this OS");
 	}
 
-	return true; // Unable to find a method, but return false will break for example deb postinst
+	// Intentional: return true when no systemd — false breaks deb postinst on non-service distros.
+	return true;
 }
 
 bool Impl::ServiceUninstall()
@@ -1669,7 +1630,6 @@ bool Impl::ServiceUninstall()
 
 	IntegrityCheckClean("service");
 
-	LogLocal("Service uninstalled");
 	LogRemote("Service uninstalled");
 
 	return true;
@@ -1678,13 +1638,6 @@ bool Impl::ServiceUninstall()
 std::string Impl::SystemWideDataPath()
 {
 	return "/sbin/eddie-vpn.dat";
-}
-
-std::string Impl::CheckIfClientPathIsAllowed(const std::string& path)
-{
-	// Missing under Linux: in other platform (Windows, macOS) check if signature of client match.
-	// LocalLog("Checking if " + path + " is allowed");
-	return "ok";
 }
 
 // --------------------------
@@ -1761,9 +1714,9 @@ std::string Impl::GetProcessPathOfId(int pid)
 	}
 }
 
-std::string Impl::GetStagingDir()
+std::string Impl::GetPrivilegedDataDir()
 {
-	return "/var/lib/eddie-vpn/stage";
+	return "/var/lib/eddie-vpn";
 }
 
 #ifdef EDDIE_IPC_UNIXSOCKET
@@ -1935,167 +1888,6 @@ std::string Impl::GetRoutesAsJson()
 	}
 
 	return "[" + json + "]";
-}
-
-std::string Impl::GetRoutesAsJsonNew()
-{
-	// Not yet used, missing at least conversion of fields in CIDR notation.
-	// Objective here is avoid under linux of external exec "route print".
-	// Study https://gist.github.com/incebellipipo/6c8657fe1c898ff64a42cddfa6dea6e0 (ipv4 only)
-
-	int n = 0;
-	std::string json = "[\n";
-
-	// IPv4
-	std::string route4Path = "/proc/net/route";
-	if (FsFileExists(route4Path))
-	{
-		std::vector<std::string> headers;
-		std::vector<std::string> lines = StringToVector(FsFileReadText(route4Path), '\n');
-		for (size_t iL = 0; iL < lines.size(); iL++)
-		{
-			std::vector<std::string> fields = StringToVector(lines[iL], '\t');
-
-			if (headers.size() == 0)
-				headers = fields;
-			else if (fields.size() == headers.size())
-			{
-				std::map<std::string, std::string> keypairs;
-				for (size_t iF = 0; iF < headers.size(); iF++)
-				{
-					std::string k = StringToLower(headers[iF]);
-					std::string v = fields[iF];
-					keypairs[k] = v;
-				}
-
-				// Adapt
-				keypairs["destination_cidr"] = GetRoutesAsJsonHexAddress2string(keypairs["destination"]) + "/" + StringFrom(GetRoutesAsJsonConvertMaskToCidrNetMask(keypairs["mask"]));
-				keypairs.erase("destination");
-				keypairs.erase("mask");
-				keypairs["gateway"] = GetRoutesAsJsonHexAddress2string(keypairs["gateway"]);
-
-				// Build JSON
-				if (n > 0)
-					json += ",\n";
-				json += "{\"iplayer\":\"ipv4\",";
-				for (std::map<std::string, std::string>::iterator it = keypairs.begin(); it != keypairs.end(); ++it)
-				{
-					std::string k = StringToLower(it->first);
-					std::string v = it->second;
-					json += ",\"" + k + "\":\"" + v + "\"";
-					n++;
-				}
-				//(a<<24) + (b<<16) + (c<<8) + d 
-
-				json += "}";
-			}
-		}
-	}
-
-	// IPv6
-	std::string route6Path = "/proc/net/ipv6_route";
-	if (FsFileExists(route6Path))
-	{
-		std::vector<std::string> headers;
-		headers.push_back("destination");
-		headers.push_back("destination_prefix");
-		headers.push_back("source");
-		headers.push_back("source_prefix");
-		headers.push_back("next_hop");
-		headers.push_back("metric");
-		headers.push_back("refcnt");
-		headers.push_back("use");
-		headers.push_back("flags");
-		headers.push_back("iface");
-		std::vector<std::string> lines = StringToVector(FsFileReadText(route6Path), '\n');
-		for (size_t iL = 0; iL < lines.size(); iL++)
-		{
-			std::vector<std::string> fields = StringToVector(lines[iL], ' ');
-
-			if (fields.size() == headers.size())
-			{
-				std::map<std::string, std::string> keypairs;
-				for (size_t iF = 0; iF < headers.size(); iF++)
-				{
-					std::string k = StringToLower(headers[iF]);
-					std::string v = fields[iF];
-					keypairs[k] = v;
-				}
-
-				// Adapt
-				keypairs["source_cidr"] = GetRoutesAsJsonHexAddress2string(keypairs["source"]) + "/" + StringFrom(GetRoutesAsJsonConvertHexPrefixToCidrNetMask(keypairs["source_prefix"]));
-				keypairs.erase("source");
-				keypairs.erase("source_prefix");
-				keypairs["destination_cidr"] = GetRoutesAsJsonHexAddress2string(keypairs["destination"]) + "/" + StringFrom(GetRoutesAsJsonConvertHexPrefixToCidrNetMask(keypairs["destination_prefix"]));
-				keypairs.erase("destination");
-				keypairs.erase("destination_prefix");
-				keypairs["next_hop"] = GetRoutesAsJsonHexAddress2string(keypairs["next_hop"]);
-
-				// Build JSON
-				if (n > 0)
-					json += ",\n";
-				json += "{\"iplayer\":\"ipv4\",";
-				for (std::map<std::string, std::string>::iterator it = keypairs.begin(); it != keypairs.end(); ++it)
-				{
-					std::string k = it->first;
-					std::string v = it->second;
-					json += ",\"" + k + "\":\"" + v + "\"";
-					n++;
-				}
-				//(a<<24) + (b<<16) + (c<<8) + d 
-
-				json += "}";
-			}
-		}
-	}
-
-	// End
-
-	json += "\n]";
-
-	return json;
-}
-
-std::string Impl::GetRoutesAsJsonHexAddress2string(const std::string& v)
-{
-	std::string result;
-	if (v.length() == 8) // IPv4
-	{
-		int iparr[4], j = 0;
-		for (unsigned int i = v.length(); i > 0; i -= 2, j++)
-		{
-			std::stringstream iss;
-			auto tmp = v.substr(i - 2, 2);
-			iss << tmp;
-			iss >> std::hex >> iparr[j];
-		}
-
-		for (int i = 0; i < 4; i++) {
-			result += (i == 3) ? std::to_string(iparr[i]) : std::to_string(iparr[i]) + ".";
-		}
-	}
-	else if (v.length() == 32)
-	{
-		result = v.substr(0, 4) + ":" + v.substr(4, 4) + ":" + v.substr(8, 4) + ":" + v.substr(12, 4) + ":" + v.substr(16, 4) + ":" + v.substr(20, 4) + ":" + v.substr(24, 4) + ":" + v.substr(28, 4);
-	}
-
-	// TODO: Normalize/shorten
-
-	return StringIpNormalize(result);
-}
-
-int Impl::GetRoutesAsJsonConvertMaskToCidrNetMask(const std::string& v)
-{
-	return 0; // TODO
-}
-
-int Impl::GetRoutesAsJsonConvertHexPrefixToCidrNetMask(const std::string& v)
-{
-	unsigned int x;
-	std::stringstream ss;
-	ss << std::hex << v;
-	ss >> x;
-	return x;
 }
 
 void Impl::NetworkManagerSetInterfaceUnmanaged(const std::string& interfaceId)

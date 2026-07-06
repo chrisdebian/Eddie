@@ -136,9 +136,39 @@ namespace Eddie.Core
 			else if (cmd == "options.set")
 			{
 				string name = data["name"].Value as string;
-				string value = data["value"].Value as string;
+
+				if ((sender is WebserverClient) && (name != null) && (name.StartsWithInv("webui.")))
+					return null; // WebServer clients cannot reconfigure the WebServer.
 
 				Engine.Instance.ProfileOptions.Set(name, data["value"].Value);
+			}
+			else if (cmd == "webui.status")
+			{
+				Json result = new Json();
+				result["enabled"].Value = Engine.Instance.ProfileOptions.GetBool("webui.enabled");
+				result["port"].Value = Engine.Instance.ProfileOptions.GetInt("webui.port");
+				result["running"].Value = (Engine.Instance.Webserver != null);
+				result["url"].Value = (Engine.Instance.Webserver != null) ? (Engine.Instance.Webserver.ListenUrl + "/") : "";
+
+				// The access key is a secret: expose it only to trusted (embedded) clients, never to the WebServer client.
+				if ((sender is WebserverClient) == false)
+					result["access_key"].Value = Engine.Instance.ProfileOptions.Get("webui.access_key");
+
+				return result;
+			}
+			else if (cmd == "webui.regenerate_key")
+			{
+				if (sender is WebserverClient)
+					return null; // Only trusted clients may rotate the key.
+
+				Engine.Instance.ProfileOptions.Set("webui.access_key", RandomGenerator.GetHash());
+				Engine.Instance.SaveSettings();
+				if (Engine.Instance.Webserver != null)
+					Engine.Instance.Webserver.ClearSessions();
+
+				Json result = new Json();
+				result["access_key"].Value = Engine.Instance.ProfileOptions.Get("webui.access_key");
+				return result;
 			}
 			else if (cmd == "ui.stats.pathprofile")
 			{

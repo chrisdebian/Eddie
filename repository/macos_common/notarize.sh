@@ -10,7 +10,7 @@ set -euo pipefail
 #SCRIPTDIR=$(dirname $(realpath "$0"))
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd -P)"
 
-APPLE_NOTARYTOOL_FILEPATH=$1
+APPLE_NOTARYTOOL_FILEPATH=${1-}
 
 if test -f "${EDDIESIGNINGDIR}/apple-dev-id.txt"; then 
     

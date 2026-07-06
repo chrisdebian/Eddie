@@ -53,26 +53,6 @@ int Impl::Main()
 
 void Impl::Do(const std::string& commandId, const std::string& command, std::map<std::string, std::string>& params)
 {	
-	// Removed, related to CVE-2025-14979
-	/*
-	else if (command == "shortcut-cli")
-	{
-		std::string action = params["action"];
-		std::string pathExecutable = params["path"];
-		std::string pathShortcut = "/usr/local/bin/eddie-cli";
-		if (action == "set")
-		{			
-			FsDirectoryCreate("/usr/local/bin");
-			FsFileWriteText(pathShortcut, "#! /bin/bash\n\"" + pathExecutable + "\" $@");
-			chmod(pathShortcut.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-		}
-		else if (action == "del")
-		{
-			if (FsFileExists(pathShortcut))
-				FsFileDelete(pathShortcut);
-		}
-	}
-	*/
 	if (command == "dns-flush")
 	{
 		// 10.5 - 10.6
@@ -322,20 +302,18 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 	else if (command == "netlock-pf-update")
 	{
 		std::string pfPath = FsLocateExecutable("pfctl");
-		std::string tmpPath = GetTempPath("netlock_pf.conf");
+		std::string tmpPath = FsWriteRootOnlyRuntimeFile("netlock_pf.conf", params["config"]);
 		std::vector<std::string> args;
 		args.push_back("-v");
 		args.push_back("-f");
 		args.push_back(tmpPath);
 
-		FsFileWriteText(tmpPath, params["config"]);
 		ExecResult pfctlApplyResult = ExecEx(pfPath, args);
 		FsFileDelete(tmpPath);
 
 		if (pfctlApplyResult.exit != 0)
 		{
 			LogRemote("Dump pfctl output: " + GetExecResultReport(pfctlApplyResult));
-			LogRemote("Dump pfctl conf: " + params["config"]);
 			ThrowException("Rules not loaded");
 		}
 	}
@@ -438,8 +416,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 				unsigned long handshakeTimeoutFirst = StringToULong(params["handshake_timeout_first"]);
 				unsigned long handshakeTimeoutConnected = StringToULong(params["handshake_timeout_connected"]);
 
-				FsFileWriteText("/tmp/testwg.conf", config);
-
 				std::string varRunPath = "/var/run/wireguard";
 				std::string interfaceAssigned = "";
 
@@ -457,7 +433,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 					// Add interface
 
-					std::string interfaceNamePath = FsGetTempPath() + FsPathSeparator + "eddie_wg_go_interface.tmp";
+					std::string interfaceNamePath = FsRuntimeTempPath("eddie_wg_go_interface.tmp");
 					SetEnv("WG_TUN_NAME_FILE", interfaceNamePath); // Will be filled with interface name
 					FsFileDelete(interfaceNamePath);
 					if (ExecEx(wireGuardGoPath, { "utun" }).exit != 0)
@@ -489,8 +465,8 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 						if (configmap.find("peer.persistentkeepalive") != configmap.end())
 							configSetConf += "PersistentKeepalive = " + configmap["peer.persistentkeepalive"] + "\n";
 
-						std::string configSetConfPath = FsGetTempPath() + FsPathSeparator + "eddie_setconf.tmp.conf";
-						FsFileWriteText(configSetConfPath, configSetConf);
+						// Intentional: configure WireGuard via wg setconf CLI.
+						std::string configSetConfPath = FsWriteRootOnlyRuntimeFile("eddie_setconf.tmp.conf", configSetConf);
 						ExecResult result = ExecEx(wgPath, { "setconf", interfaceAssigned, configSetConfPath });
 						FsFileDelete(configSetConfPath);
 						if (result.exit != 0)
@@ -690,7 +666,6 @@ bool Impl::ServiceInstall()
 	bool installed = (launchctlResult.exit == 0);
 	if (installed)
 	{
-		LogLocal("Service installed");
 		LogRemote("Service installed");
 	}
 	return installed;
@@ -716,7 +691,6 @@ bool Impl::ServiceUninstall()
 
 	IntegrityCheckClean("service");
 
-	LogLocal("Service uninstalled");
 	LogRemote("Service uninstalled");
 
 	return result;
@@ -767,74 +741,6 @@ std::string Impl::StringEnsureNetworkServiceName(const std::string& str)
 std::string Impl::SystemWideDataPath()
 {
 	return "/Library/PrivilegedHelperTools/website.eddie.Helper.dat";
-}
-
-std::string Impl::CheckIfClientPathIsAllowed(const std::string& path)
-{
-#ifdef Debug
-	return "ok";
-#else
-	std::string localPath = GetProcessPathCurrent();
-	std::string remotePath = path;
-
-	std::string codesignPath = FsLocateExecutable("codesign");
-
-	// Check remote signature
-	{
-		std::vector<std::string> args;
-		args.push_back("--verify");
-		args.push_back(remotePath);
-		std::string stdout;
-		std::string stderr;
-		ExecResult verifyResult = ExecEx(codesignPath, args);
-		if (verifyResult.exit != 0)
-		{
-			LogLocal("Remote executable '" + remotePath + "' not signed");
-			return "Remote executable '" + remotePath + "' not signed";
-		}
-	}
-
-	// Check if remote signature authority match current
-	{
-		ExecResult infoLocal = ExecEx(codesignPath, { "-dv", "--verbose=4", localPath });
-		if (infoLocal.exit != 0)
-		{
-			LogLocal("Unable to obtain signature of local");
-			return "Unable to obtain signature of local";
-		}
-		std::string infoLocalFiltered = "";
-		std::vector<std::string> infoLocalLines = StringToVector(infoLocal.out, '\n');
-		for (std::vector<std::string>::const_iterator i = infoLocalLines.begin(); i != infoLocalLines.end(); ++i)
-		{
-			std::string line = *i;
-			if (StringStartsWith(line, "Authority="))
-				infoLocalFiltered += line + "\n";
-		}
-
-		ExecResult infoRemote = ExecEx(codesignPath, { "-dv", "--verbose=4", remotePath });
-		if (infoRemote.exit != 0)
-		{
-			LogLocal("Unable to obtain signature of remote");
-			return "Unable to obtain signature of remote";
-		}
-		std::string infoRemoteFiltered = "";
-		std::vector<std::string> infoRemoteLines = StringToVector(infoRemote.out, '\n');
-		for (std::vector<std::string>::const_iterator i = infoRemoteLines.begin(); i != infoRemoteLines.end(); ++i)
-		{
-			std::string line = *i;
-			if (StringStartsWith(line, "Authority="))
-				infoRemoteFiltered += line + "\n";
-		}
-
-		if (infoLocalFiltered != infoRemoteFiltered)
-		{
-			LogLocal("Remote Authority informations don't match");
-			return "Remote Authority informations don't match";
-		}
-	}
-
-	return "ok";
-#endif
 }
 
 #ifndef EDDIE_IPC_LOCAL
@@ -947,9 +853,9 @@ std::string Impl::StringEnsureInterfaceName(const std::string& str)
 	return r;
 }
 
-std::string Impl::GetStagingDir()
+std::string Impl::GetPrivilegedDataDir()
 {
-	return "/var/run/eddie-vpn/stage";
+	return "/var/run/eddie-vpn";
 }
 
 #ifdef EDDIE_IPC_UNIXSOCKET

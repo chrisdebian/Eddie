@@ -23,7 +23,7 @@ namespace Eddie.Forms.Linux
 
 		public bool IsStarted()
 		{
-			//return ( (m_pathWrite != "") && (m_oneStart) ); // 2.17.3
+			// Intentional: ready when FIFO path exists, before first command.
 			return (m_pathWrite != "");
 		}
 

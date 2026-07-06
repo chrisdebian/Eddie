@@ -24,7 +24,7 @@ using Eddie.Core;
 
 namespace Eddie.UI.Cocoa.Osx
 {
-    public class UiClient : Eddie.Core.UiClientLegacy
+    public class UiClient : Eddie.Core.UiClient
 	{
         public static UiClient Instance;
         public Engine Engine;

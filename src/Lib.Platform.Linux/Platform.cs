@@ -926,10 +926,9 @@ namespace Eddie.Platform.Linux
 			{
 				elevationMethod = "";
 
+				// Intentional: setuid elevated helper runs without elevation prompt.
 				if ((elevationMethod == "") && (FileRunAsRoot(m_elevatedRunPath)))
 				{
-					// chown root:root eddie-cli-elevated
-					// chmod u+s eddie-cli-elevated
 					elevationMethod = "none";
 				}
 

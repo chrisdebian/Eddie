@@ -275,8 +275,8 @@ namespace Eddie.Core.ConfigBuilder
 					Directives[name] = new List<Directive>();
 				}
 
+				// Intentional: drop script-security directives unless force.
 				if (force == false)
-					//if (Engine.Instance.Options.GetBool("openvpn.allow.script-security") == false)
 					if (IsGroupAllowScriptSecurity(name))
 						return;
 

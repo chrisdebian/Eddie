@@ -22,9 +22,6 @@ namespace Eddie.UI.Cocoa.Osx
 		AppKit.NSPopUpButton CboSpeedResolutions { get; set; }
 
 		[Outlet]
-		AppKit.NSButton ChkLockedMode { get; set; }
-
-		[Outlet]
 		AppKit.NSButton ChkRemember { get; set; }
 
 		[Outlet]
@@ -62,9 +59,6 @@ namespace Eddie.UI.Cocoa.Osx
 
 		[Outlet]
 		AppKit.NSButton CmdLogsCopy { get; set; }
-
-		[Outlet]
-		AppKit.NSButton CmdLogsOpenVpnManagement { get; set; }
 
 		[Outlet]
 		AppKit.NSButton CmdLogsSave { get; set; }
@@ -134,9 +128,6 @@ namespace Eddie.UI.Cocoa.Osx
 
 		[Outlet]
 		AppKit.NSTextField LblConnectedServerName { get; set; }
-
-		[Outlet]
-		AppKit.NSTextField LblDevice { get; set; }
 
 		[Outlet]
 		AppKit.NSTextField LblKey { get; set; }
@@ -235,9 +226,6 @@ namespace Eddie.UI.Cocoa.Osx
 		AppKit.NSMenuItem MnuTrayRestore { get; set; }
 
 		[Outlet]
-		AppKit.NSMenuItem MnuTraySpeedTest { get; set; }
-
-		[Outlet]
 		AppKit.NSMenuItem MnuTrayStatus { get; set; }
 
 		[Outlet]
@@ -283,9 +271,6 @@ namespace Eddie.UI.Cocoa.Osx
 		AppKit.NSTextField TxtAirU { get; set; }
 
 		[Outlet]
-		AppKit.NSTextField TxtCommand { get; set; }
-
-		[Outlet]
 		AppKit.NSTextField TxtConnectedDownload { get; set; }
 
 		[Outlet]
@@ -315,11 +300,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (CboSpeedResolutions != null) {
 				CboSpeedResolutions.Dispose ();
 				CboSpeedResolutions = null;
-			}
-
-			if (ChkLockedMode != null) {
-				ChkLockedMode.Dispose ();
-				ChkLockedMode = null;
 			}
 
 			if (ChkRemember != null) {
@@ -385,11 +365,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (CmdLogsCopy != null) {
 				CmdLogsCopy.Dispose ();
 				CmdLogsCopy = null;
-			}
-
-			if (CmdLogsOpenVpnManagement != null) {
-				CmdLogsOpenVpnManagement.Dispose ();
-				CmdLogsOpenVpnManagement = null;
 			}
 
 			if (CmdLogsSave != null) {
@@ -505,11 +480,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (LblConnectedServerName != null) {
 				LblConnectedServerName.Dispose ();
 				LblConnectedServerName = null;
-			}
-
-			if (LblDevice != null) {
-				LblDevice.Dispose ();
-				LblDevice = null;
 			}
 
 			if (LblKey != null) {
@@ -672,11 +642,6 @@ namespace Eddie.UI.Cocoa.Osx
 				MnuTrayRestore = null;
 			}
 
-			if (MnuTraySpeedTest != null) {
-				MnuTraySpeedTest.Dispose ();
-				MnuTraySpeedTest = null;
-			}
-
 			if (MnuTrayStatus != null) {
 				MnuTrayStatus.Dispose ();
 				MnuTrayStatus = null;
@@ -745,11 +710,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (TabOverview != null) {
 				TabOverview.Dispose ();
 				TabOverview = null;
-			}
-
-			if (TxtCommand != null) {
-				TxtCommand.Dispose ();
-				TxtCommand = null;
 			}
 
 			if (TxtConnectedDownload != null) {

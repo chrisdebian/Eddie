@@ -391,7 +391,7 @@ bool PingEngine::SocketSetNonBlock(int s)
 {
 #ifdef EDDIE_PING_PLATFORM_WINDOWS
 	unsigned long m = 1;
-	if (ioctlsocket(m_socket4, FIONBIO, &m) != 0)
+	if (ioctlsocket(s, FIONBIO, &m) != 0)
 		return false;
 #endif
 
@@ -410,57 +410,6 @@ bool PingEngine::SocketSetHdrIncl(int s)
 		return false;
 #endif
 	return true;
-}
-
-// Call from Impl::Run a PingEngine p; p.TestDebug() to debug
-void PingEngine::TestDebug()
-{
-	std::cout << "Ping Test Init\n";
-
-	m_debug = true;
-
-	Start();
-
-	std::cout << "Ping Test Samples IPv4\n";
-
-	Request(1,"193.148.16.210", 5000, "expected:230");
-	Request(2,"8.8.8.9", 5000, "expected:timeout");
-	Request(3,"188.166.41.48", 5000, "expected:52");
-	Request(4,"184.75.223.210", 5000, "expected:127");
-
-	std::cout << "Ping Test Samples IPv6\n";
-
-	Request(5,"2606:6080:1002:6:ddb0:6fe6:c526:9e8a", 5000, "expected-v6:127");
-	Request(6,"2a03:b0c0:2:d0::11b4:6001", 5000, "expected-v6:52");
-	Request(7,"2a03:b0c0:2:d0::11b4:6002", 5000, "expected-v6:timeout");
-
-	std::cout << "Ping Test Start\n";
-
-	uint64_t timeStart = GetTimestampUnixUsec();	
-	for (;;)
-	{
-		int nPending = Check();
-
-		int sleepMs = 1000; // 1s
-		if (nPending > 0)
-			sleepMs = 1;
-
-#ifdef EDDIE_PING_PLATFORM_WINDOWS
-		::Sleep(sleepMs);
-#endif
-#ifdef EDDIE_PING_PLATFORM_UNIX
-		usleep(sleepMs * 1000);
-#endif
-
-		if (GetTimestampUnixUsec() - timeStart > 10 * 1000 * 1000) // Run for 10 seconds and exit
-			break;
-	}
-
-	std::cout << "Ping Test Stopping\n";
-
-	Stop();
-
-	std::cout << "Ping Test End\n";
 }
 
 void PingEngine::OnResponse(const uint16_t& id, const int& result)

@@ -339,7 +339,7 @@ namespace Eddie.Platform.MacOS
 		{
 			base.FlushDNS();
 
-			Engine.Instance.Elevated.DoCommandSync("dns-flush", "services", Engine.Instance.ProfileOptions.Get("linux.dns.services"));
+			Engine.Instance.Elevated.DoCommandSync("dns-flush");
 		}		
 
 		public override string LocateResource(string relativePath)

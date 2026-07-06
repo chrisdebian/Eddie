@@ -10,22 +10,22 @@ SCRIPTDIR="$(cd "$(dirname "$0")" && pwd -P)"
 
 # Check args
 
-if [ "$1" == "" ]; then
+if [ "${1-}" == "" ]; then
 	echo First arg must be Project: cli,ui
 	exit 1
 fi
 
-if [ "$2" == "" ]; then
+if [ "${2-}" == "" ]; then
 	echo Second arg must be Arch: x64, arm64
 	exit 1
 fi
 
-if [ "$3" == "" ]; then
+if [ "${3-}" == "" ]; then
 	echo Third arg must be OS: 10.9,10.15
 	exit 1
 fi
 
-if [ "$4" == "" ]; then
+if [ "${4-}" == "" ]; then
 	echo Fourth arg must be line: l, u
 	exit 1
 fi

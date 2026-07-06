@@ -35,7 +35,6 @@ extern "C" {
 
 	EDDIE_MACOS_NATIVE_EXPORT int eddie_file_get_mode(const char* filename);
 	EDDIE_MACOS_NATIVE_EXPORT int eddie_file_set_mode(const char* filename, int mode);
-	EDDIE_MACOS_NATIVE_EXPORT int eddie_file_set_mode_str(const char* filename, const char* mode);
 
 	EDDIE_MACOS_NATIVE_EXPORT bool eddie_file_get_runasroot(const char* filename);
 

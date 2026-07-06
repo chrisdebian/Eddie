@@ -18,7 +18,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Xml;
 
 namespace Eddie.Core
@@ -320,40 +319,6 @@ namespace Eddie.Core
 				Platform.Instance.FileContentsWriteBytes(newPath, Storage.EncodeFormat("v2n", RandomGenerator.GetRandomId64(), content, Constants.PasswordIfEmpty));
 				Platform.Instance.FileDelete(newPath.Replace("default.profile", "default.xml"));
 			}
-		}
-
-		public static string FixOldProfile(string originalPath)
-		{
-			FileInfo originalFile = new FileInfo(originalPath);
-			string newPath = "";
-			if (originalFile.Name == "AirVPN.xml")
-				newPath = originalFile.DirectoryName + "/default.json";
-			else
-				newPath = originalFile.DirectoryName + "/" + originalFile.Name.Replace(".xml", ".json");
-
-			XmlDocument xmlDoc = new XmlDocument();
-			xmlDoc.Load(originalPath);
-
-			// Fix
-			{
-				XmlNodeList xmlList = xmlDoc.DocumentElement.GetElementsByTagName("providers");
-				if (xmlList.Count == 1)
-				{
-					XmlElement xmlProviders = xmlList[0] as XmlElement;
-
-					foreach (XmlElement xmlProvider in xmlProviders.ChildNodes)
-					{
-						xmlProvider.SetAttribute("type", xmlProvider.Name);
-						xmlProvider.SetAttribute("json-convert-name", "provider");
-					}
-				}
-			}
-			/*
-			Json j = Conversions.ToJson(xmlDoc.DocumentElement);
-			Platform.Instance.FileContentsWriteText(newPath, j.ToJsonPretty());
-			*/
-
-			return newPath;
 		}
 	}
 }

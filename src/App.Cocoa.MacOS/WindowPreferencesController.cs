@@ -78,7 +78,6 @@ namespace Eddie.UI.Cocoa.Osx
 				GuiUtils.SetHidden(LblRoutesOtherwise, true);
 				GuiUtils.SetHidden(CboRoutesOtherwise, true);
 				GuiUtils.SetHidden(LblLockRoutingOutWarning, true);
-				GuiUtils.SetHidden(CmdGeneralTos, true);
 			}
 
 			Window.Title = Constants.Name + " - " + LanguageManager.GetText(LanguageItems.WindowsSettingsTitle);
@@ -429,9 +428,6 @@ namespace Eddie.UI.Cocoa.Osx
 			// Disabled in this version
 			GuiUtils.SetHidden(LblSystemStart, true);
 			GuiUtils.SetHidden(ChkSystemStart, true);
-			GuiUtils.SetHidden(ChkOpenVpnDirectivesAllowScriptSecurity, true);
-
-			GuiUtils.SetHidden(ChkCliShortcut, true); // Removed, related to CVE-2025-14979
 
             ReadOptions();
 
@@ -574,6 +570,8 @@ namespace Eddie.UI.Cocoa.Osx
 		void AdvancedEventEdit()
 		{
 			nint index = TableAdvancedEvents.SelectedRow;
+			if (index < 0)
+				return;
 
 			WindowPreferencesEventController.Item = TableAdvancedEventsController.Items[(int)index];
 			WindowPreferencesEventController dlg = new WindowPreferencesEventController();
@@ -644,7 +642,6 @@ namespace Eddie.UI.Cocoa.Osx
 			GuiUtils.SetCheck(ChkGeneralStartLast, o.GetBool("servers.startlast"));
 			GuiUtils.SetCheck(ChkGeneralOsxVisible, o.GetBool("gui.osx.visible"));
 			// GuiUtils.SetCheck (ChkGeneralOsxDock, o.GetBool ("gui.osx.dock")); // See this FAQ: https://airvpn.org/topic/13331-its-possible-to-hide-the-icon-in-dock-bar-under-os-x/
-			// GuiUtils.SetCheck(ChkCliShortcut, Core.Platform.Instance.FileExists("/usr/local/bin/eddie-cli")); // Removed, related to CVE-2025-14979			
 			GuiUtils.SetCheck(ChkUiSystemBarShowInfo, o.GetBool("gui.osx.sysbar.show_info"));
 			GuiUtils.SetCheck(ChkUiSystemBarShowSpeed, o.GetBool("gui.osx.sysbar.show_speed"));
 			GuiUtils.SetCheck(ChkUiSystemBarShowServer, o.GetBool("gui.osx.sysbar.show_server"));
@@ -969,7 +966,6 @@ namespace Eddie.UI.Cocoa.Osx
 			TxtAdvancedOpenVpnDirectivesDefault.StringValue = o.Get("openvpn.directives");
 			TxtAdvancedOpenVpnDirectivesCustom.StringValue = o.Get("openvpn.custom");
 			TxtOpenVpnDirectivesCustomPath.StringValue = o.Get("openvpn.directives.path");
-			//GuiUtils.SetCheck(ChkOpenVpnDirectivesAllowScriptSecurity, o.GetBool("openvpn.allow.script-security"));
 			GuiUtils.SetCheck(ChkOpenVpnDirectivesChaCha, o.GetBool("openvpn.directives.chacha20"));
 
             // WireGuard
@@ -1048,13 +1044,6 @@ namespace Eddie.UI.Cocoa.Osx
 			o.SetBool("servers.startlast", GuiUtils.GetCheck(ChkGeneralStartLast));
 			o.SetBool("gui.osx.visible", GuiUtils.GetCheck(ChkGeneralOsxVisible));
 			// o.SetBool ("gui.osx.dock", GuiUtils.GetCheck (ChkGeneralOsxDock)); // See this FAQ: https://airvpn.org/topic/13331-its-possible-to-hide-the-icon-in-dock-bar-under-os-x/
-
-			// Removed, related to CVE-2025-14979
-			/*
-			string pathCLI = Core.Platform.Instance.GetExecutablePath();
-			pathCLI = pathCLI.Substring(0, pathCLI.Length - 2) + "CLI";
-			Engine.Instance.Elevated.DoCommandSync("shortcut-cli", "action", (GuiUtils.GetCheck(ChkCliShortcut) ? "set" : "del"), "path", pathCLI);
-			*/
 
 			o.SetBool("gui.osx.sysbar.show_info", GuiUtils.GetCheck(ChkUiSystemBarShowInfo));
 			o.SetBool("gui.osx.sysbar.show_speed", GuiUtils.GetCheck(ChkUiSystemBarShowSpeed));
@@ -1342,7 +1331,6 @@ namespace Eddie.UI.Cocoa.Osx
 			o.Set("openvpn.directives", TxtAdvancedOpenVpnDirectivesDefault.StringValue);
 			o.Set("openvpn.custom", TxtAdvancedOpenVpnDirectivesCustom.StringValue);
 			o.Set("openvpn.directives.path", TxtOpenVpnDirectivesCustomPath.StringValue);
-			//s.Set("openvpn.allow.script-security", GuiUtils.GetCheck(ChkOpenVpnDirectivesAllowScriptSecurity));
 			o.SetBool("openvpn.directives.chacha20", GuiUtils.GetCheck(ChkOpenVpnDirectivesChaCha));
 
 			// WireGuard

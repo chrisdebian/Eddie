@@ -106,7 +106,7 @@ namespace Eddie.Platform.Linux
 				AddRule(rules, "ipv6", "add chain ip6 mangle INPUT { type filter hook input priority -150; policy accept; }");
 				AddRule(rules, "ipv4", "add chain ip mangle FORWARD { type filter hook forward priority -150; policy accept; }");
 				AddRule(rules, "ipv6", "add chain ip6 mangle FORWARD { type filter hook forward priority -150; policy accept; }");
-				AddRule(rules, "ipv4", "add chain ip mangle OUTPUT { type route hook output priority - 150; policy accept; }");
+				AddRule(rules, "ipv4", "add chain ip mangle OUTPUT { type route hook output priority -150; policy accept; }");
 				AddRule(rules, "ipv6", "add chain ip6 mangle OUTPUT { type route hook output priority -150; policy accept; }");
 				AddRule(rules, "ipv4", "add chain ip mangle POSTROUTING { type filter hook postrouting priority -150; policy accept; }");
 				AddRule(rules, "ipv6", "add chain ip6 mangle POSTROUTING { type filter hook postrouting priority -150; policy accept; }");
@@ -286,7 +286,7 @@ namespace Eddie.Platform.Linux
 
 				// If incoming=allow, allow packet response to out
 				// We avoid a general rules, because in block/block mode don't drop already exists keepalive
-				if (defaultPolicyInput == "ACCEPT")
+				if (defaultPolicyInput == "accept")
 				{
 					AddRule(rules, "ipv4", "add rule ip filter OUTPUT ct state established  counter accept");
 					AddRule(rules, "ipv6", "add rule ip6 filter OUTPUT ct state established  counter accept");
@@ -297,8 +297,6 @@ namespace Eddie.Platform.Linux
 				{
 					if (ip.IsV4)
 					{
-						Engine.Instance.Logs.LogVerbose("c#p:" + "ipv4_in_" + ip.ToCIDR() + "_2");
-						Engine.Instance.Logs.LogVerbose("c#e:" + Core.Crypto.Manager.HashSHA256("ipv4_in_" + ip.ToCIDR() + "_2"));
 						string comment = "eddie_ip_" + Core.Crypto.Manager.HashSHA256("ipv4_in_" + ip.ToCIDR() + "_2");
 						AddRule(rules, "ipv4", "add rule ip filter OUTPUT ip daddr " + ip.ToCIDR() + " ct state established counter accept comment " + comment);
 					}

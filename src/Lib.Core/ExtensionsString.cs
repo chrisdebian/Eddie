@@ -250,7 +250,7 @@ namespace Eddie.Core
 
 		public static List<string> StringToList(this string str)
 		{
-			return StringToList(str, "\n\r; ,", true, true, true, true);
+			return StringToList(str, "\n\r; ,\u2028", true, true, true, true);
 		}
 
 		public static List<string> StringToList(this string str, string separators)
@@ -417,7 +417,7 @@ namespace Eddie.Core
 				return;
 			if ((skipComment) && (v.StartsWithInv("#")))
 				return;
-			result.Add(item);
+			result.Add(v);
 		}
 	}
 }

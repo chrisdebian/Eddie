@@ -79,6 +79,7 @@ namespace Eddie.UI.Cocoa.Osx
 						
             m_connection = Connection.BuildConnection(null);
 
+			// Intentional: show full generated config in connection detail dialog.
 			TxtOvpnGenerated.Value = Core.Platform.Instance.NormalizeString(m_connection.ExportConfigStartup());
 
 			string configOriginal = m_connection.ExportConfigOriginal();

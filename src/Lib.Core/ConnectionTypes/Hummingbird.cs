@@ -167,7 +167,7 @@ namespace Eddie.Core.ConnectionTypes
 				{
 					if ((Transport != "SSH") && (Transport != "SSL")) // Otherwise report 127.0.0.1
 					{
-						List<string> fields = message.RegExMatchSingle("Contacting ([a-z90-9\\.\\:]+?):(\\d+?)\\s");
+						List<string> fields = message.RegExMatchSingle("Contacting ([a-z0-9\\.\\:]+?):(\\d+?)\\s");
 						if ((fields != null) && (fields.Count == 2))
 						{
 							EntryIP = fields[0];
@@ -298,7 +298,6 @@ namespace Eddie.Core.ConnectionTypes
 			m_elevatedCommand.Parameters["command"] = "hummingbird";
 			m_elevatedCommand.Parameters["dns-ignore"] = Engine.Instance.ProfileOptions.GetBool("dns.delegate") ? "false" : "true";
 			m_elevatedCommand.Parameters["gui-version"] = Constants.Name + Constants.VersionDesc;
-			m_elevatedCommand.Parameters["config"] = m_fileConfig.Path;
 		}
 
 		public override ConfigBuilder.OpenVPN GenerateConfigBuilder()

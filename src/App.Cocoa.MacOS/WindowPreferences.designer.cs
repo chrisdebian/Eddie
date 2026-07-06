@@ -100,9 +100,6 @@ namespace Eddie.UI.Cocoa.Osx
 		AppKit.NSButton ChkAdvancedSkipAlreadyRun { get; set; }
 
 		[Outlet]
-		AppKit.NSButton ChkCliShortcut { get; set; }
-
-		[Outlet]
 		AppKit.NSButton ChkConnect { get; set; }
 
 		[Outlet]
@@ -152,9 +149,6 @@ namespace Eddie.UI.Cocoa.Osx
 
 		[Outlet]
 		AppKit.NSButton ChkNetworkIPv6AutoSwitch { get; set; }
-
-		[Outlet]
-		AppKit.NSButton ChkOpenVpnDirectivesAllowScriptSecurity { get; set; }
 
 		[Outlet]
 		AppKit.NSButton ChkOpenVpnDirectivesChaCha { get; set; }
@@ -212,9 +206,6 @@ namespace Eddie.UI.Cocoa.Osx
 
 		[Outlet]
 		AppKit.NSButton CmdDnsRemove { get; set; }
-
-		[Outlet]
-		AppKit.NSButton CmdGeneralTos { get; set; }
 
 		[Outlet]
 		AppKit.NSButton CmdLockHelp { get; set; }
@@ -499,11 +490,6 @@ namespace Eddie.UI.Cocoa.Osx
 				ChkAdvancedSkipAlreadyRun = null;
 			}
 
-			if (ChkCliShortcut != null) {
-				ChkCliShortcut.Dispose ();
-				ChkCliShortcut = null;
-			}
-
 			if (ChkConnect != null) {
 				ChkConnect.Dispose ();
 				ChkConnect = null;
@@ -577,11 +563,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (ChkNetworkIPv6AutoSwitch != null) {
 				ChkNetworkIPv6AutoSwitch.Dispose ();
 				ChkNetworkIPv6AutoSwitch = null;
-			}
-
-			if (ChkOpenVpnDirectivesAllowScriptSecurity != null) {
-				ChkOpenVpnDirectivesAllowScriptSecurity.Dispose ();
-				ChkOpenVpnDirectivesAllowScriptSecurity = null;
 			}
 
 			if (ChkOpenVpnDirectivesChaCha != null) {
@@ -682,11 +663,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (CmdDnsRemove != null) {
 				CmdDnsRemove.Dispose ();
 				CmdDnsRemove = null;
-			}
-
-			if (CmdGeneralTos != null) {
-				CmdGeneralTos.Dispose ();
-				CmdGeneralTos = null;
 			}
 
 			if (CmdLockHelp != null) {

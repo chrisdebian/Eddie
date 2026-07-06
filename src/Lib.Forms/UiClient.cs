@@ -22,7 +22,7 @@ using System.Windows.Forms;
 
 namespace Eddie.Forms
 {
-	public class UiClient : Eddie.Core.UiClientLegacy
+	public class UiClient : Eddie.Core.UiClient
 	{
 		public static UiClient Instance;
 		public Forms.Main MainWindow;

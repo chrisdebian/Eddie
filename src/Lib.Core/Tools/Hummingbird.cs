@@ -28,7 +28,7 @@ namespace Eddie.Core.Tools
 			if (Version.IndexOfInv("\n") != -1)
 				Version = Version.Substring(0, Version.IndexOfInv("\n")).Trim();
 
-			// Workaround until Hummingbird report also the original OpenVPN3 version (needed by other checks).
+			// Intentional: prefix OpenVPN3 version until Hummingbird reports it in --version output.
 			Version = "3.3.2 - " + Version;
 		}
 

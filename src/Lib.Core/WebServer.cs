@@ -23,8 +23,6 @@ using System.Net;
 using System.Text;
 using System.Threading;
 
-// WIP: Missing feature, a token access. Webserver not yet used anyway.
-
 namespace Eddie.Core
 {
 	public class Webserver
@@ -36,6 +34,10 @@ namespace Eddie.Core
 		//private List<Json> m_pullItems = new List<Json>();
 
 		private WebserverClient m_client = new WebserverClient();
+
+		private const string SessionCookieName = "eddie_session";
+		private static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(24);
+		private readonly Dictionary<string, DateTime> m_sessions = new Dictionary<string, DateTime>();
 
 		public static string GetPath()
 		{
@@ -158,8 +160,8 @@ namespace Eddie.Core
 
 		public void Start()
 		{
-			//ListenUrl = "http://" + Engine.Instance.Options.Get("webui.ip") + ":" + Engine.Instance.Options.Get("webui.port");			
-			ListenUrl = "http://localhost:4649"; // Note: no 127.0.0.1, otherwise throw "Access is denied".
+			int port = Engine.Instance.ProfileOptions.GetInt("webui.port");
+			ListenUrl = "http://localhost:" + port.ToString(System.Globalization.CultureInfo.InvariantCulture); // Note: bind to localhost, not 127.0.0.1, otherwise HttpListener throws "Access is denied".
 			Init(ListenUrl + "/");
 			Run();
 		}
@@ -198,57 +200,79 @@ namespace Eddie.Core
 				}
 			}
 
+			// Anti DNS-rebinding: only accept requests addressed to a loopback Host.
+			if (CheckHost(requestHeaders) == false)
+			{
+				context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+				return;
+			}
+
 			if (requestHttpMethod == "options")
 			{
 				Engine.Instance.Logs.LogVerbose(origin);
 				context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+				return;
 			}
 
-			if (context.Request.Url.AbsolutePath == "/api/command/")
+			string absolutePath = context.Request.Url.AbsolutePath;
+
+			if (absolutePath == "/api/login")
 			{
-				if (requestHttpMethod == "post")
-				{
-					// Pull mode
-					string data = new StreamReader(context.Request.InputStream).ReadToEnd();
-					Json ret = Receive(data);
-					if (ret != null)
-						bodyResponse = ret.ToJson();
-					else
-						bodyResponse = "null";
-				}
-				else
-				{
-					context.Response.StatusCode = (int)HttpStatusCode.NoContent;
-				}
+				bodyResponse = HandleLogin(context);
 			}
-			else if (context.Request.Url.AbsolutePath == "/api/pull/")
+			else if ((absolutePath == "/api/command/") || (absolutePath == "/api/pull/"))
 			{
-				if (requestHttpMethod == "post")
+				if (IsAuthenticated(context) == false)
 				{
-					lock (m_client.Pendings)
+					context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+					return;
+				}
+
+				if (absolutePath == "/api/command/")
+				{
+					if (requestHttpMethod == "post")
 					{
-						if (m_client.Pendings.Count == 0)
-						{
-							bodyResponse = "null";
-						}
+						string data = new StreamReader(context.Request.InputStream).ReadToEnd();
+						Json ret = Receive(data);
+						if (ret != null)
+							bodyResponse = ret.ToJson();
 						else
-						{
-							Json data = m_client.Pendings[0];
-							m_client.Pendings.RemoveAt(0);
-							bodyResponse = data.ToJson();
-						}
+							bodyResponse = "null";
+					}
+					else
+					{
+						context.Response.StatusCode = (int)HttpStatusCode.NoContent;
 					}
 				}
-				else
+				else // /api/pull/
 				{
-					context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+					if (requestHttpMethod == "post")
+					{
+						lock (m_client.Pendings)
+						{
+							if (m_client.Pendings.Count == 0)
+							{
+								bodyResponse = "null";
+							}
+							else
+							{
+								Json data = m_client.Pendings[0];
+								m_client.Pendings.RemoveAt(0);
+								bodyResponse = data.ToJson();
+							}
+						}
+					}
+					else
+					{
+						context.Response.StatusCode = (int)HttpStatusCode.NoContent;
+					}
 				}
 			}
 			else
 			{
 				string urlPath = context.Request.Url.LocalPath;
 				if (urlPath == "/")
-					urlPath = "/index.html";
+					urlPath = IsAuthenticated(context) ? "/index.html" : "/login.html";
 				string localPath = GetPath() + urlPath;
 				if (Platform.Instance.FileExists(localPath))
 				{
@@ -277,7 +301,142 @@ namespace Eddie.Core
 		public Json Receive(string data)
 		{
 			Json jData = Json.Parse(data);
-			return m_client.Command(jData["data"].Value as Json);
+			Json command = jData["data"].Value as Json;
+
+			// Defense in depth: WebServer clients cannot reconfigure the WebServer itself
+			// (the authoritative check is in UiManager, keyed on the sender).
+			if (command != null)
+			{
+				string cmd = command["command"].Value as string;
+				if ((cmd == "options.set") && (command["name"].ValueString.StartsWithInv("webui.")))
+					return null;
+			}
+
+			return m_client.Command(command);
+		}
+
+		private string HandleLogin(HttpListenerContext context)
+		{
+			if (context.Request.HttpMethod.ToUpperInvariant() != "POST")
+			{
+				context.Response.StatusCode = (int)HttpStatusCode.MethodNotAllowed;
+				return "";
+			}
+
+			string body = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding).ReadToEnd();
+			string submittedKey = ParseKeyFromBody(body, context.Request.ContentType);
+
+			string accessKey = Engine.Instance.ProfileOptions.Get("webui.access_key");
+			if ((accessKey != "") && Crypto.Manager.FixedTimeEquals(submittedKey, accessKey))
+			{
+				string sessionId = CreateSession();
+				context.Response.Headers.Add("Set-Cookie", SessionCookieName + "=" + sessionId + "; HttpOnly; SameSite=Strict; Path=/");
+				context.Response.Redirect("/");
+				return "";
+			}
+
+			context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+			context.Response.ContentType = "text/html; charset=utf-8";
+			return "<!DOCTYPE html><meta charset=\"utf-8\"><body style=\"font-family:sans-serif\"><p>Invalid access key. <a href=\"/\">Try again</a></p></body>";
+		}
+
+		private static string ParseKeyFromBody(string body, string contentType)
+		{
+			if (body == null)
+				return "";
+			body = body.Trim();
+
+			if ((contentType != null) && (contentType.ToLowerInvariant().Contains("application/json")))
+			{
+				try
+				{
+					Json j = Json.Parse(body);
+					return j["key"].ValueString;
+				}
+				catch (Exception)
+				{
+					return "";
+				}
+			}
+
+			// application/x-www-form-urlencoded
+			foreach (string pair in body.Split('&'))
+			{
+				string[] kv = pair.Split(new char[] { '=' }, 2);
+				if (kv.Length != 2)
+					continue;
+				if (Uri.UnescapeDataString(kv[0]) == "key")
+					return Uri.UnescapeDataString(kv[1].Replace('+', ' '));
+			}
+
+			return "";
+		}
+
+		private bool IsAuthenticated(HttpListenerContext context)
+		{
+			string accessKey = Engine.Instance.ProfileOptions.Get("webui.access_key");
+			if (accessKey == "")
+				return false; // Fail closed if no key is configured.
+
+			// Bearer token (scripts / API clients)
+			string auth = context.Request.Headers["Authorization"];
+			if ((auth != null) && (auth.StartsWithInv("Bearer ")))
+			{
+				string token = auth.Substring("Bearer ".Length).Trim();
+				if (Crypto.Manager.FixedTimeEquals(token, accessKey))
+					return true;
+			}
+
+			// Session cookie (browser)
+			Cookie cookie = context.Request.Cookies[SessionCookieName];
+			if ((cookie != null) && (cookie.Value != ""))
+			{
+				lock (m_sessions)
+				{
+					DateTime expiry;
+					if (m_sessions.TryGetValue(cookie.Value, out expiry))
+					{
+						if (expiry > DateTime.UtcNow)
+						{
+							m_sessions[cookie.Value] = DateTime.UtcNow.Add(SessionLifetime); // sliding renewal
+							return true;
+						}
+
+						m_sessions.Remove(cookie.Value);
+					}
+				}
+			}
+
+			return false;
+		}
+
+		private string CreateSession()
+		{
+			string id = RandomGenerator.GetHash();
+			lock (m_sessions)
+				m_sessions[id] = DateTime.UtcNow.Add(SessionLifetime);
+			return id;
+		}
+
+		public void ClearSessions()
+		{
+			lock (m_sessions)
+				m_sessions.Clear();
+		}
+
+		private static bool CheckHost(Dictionary<string, string> requestHeaders)
+		{
+			// Intentional: accept missing Host header.
+			if (requestHeaders.ContainsKey("host") == false)
+				return true;
+
+			string host = requestHeaders["host"];
+			int posColon = host.LastIndexOf(':');
+			if (posColon >= 0)
+				host = host.Substring(0, posColon);
+			host = host.Trim().Trim('[', ']'); // strip IPv6 brackets
+
+			return (host == "localhost") || (host == "127.0.0.1") || (host == "::1");
 		}
 	}
 }

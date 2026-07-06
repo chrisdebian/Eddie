@@ -66,6 +66,21 @@ namespace Eddie.Core
 		}
 		public void Stop()
 		{
+			if (m_dotnet)
+				return;
+
+			if (m_elevatedPings != null)
+			{
+				lock (m_elevatedPings)
+				{
+					foreach (Ping p in m_elevatedPings.Values)
+						p.End(-1);
+					m_elevatedPings.Clear();
+				}
+			}
+
+			if ((m_elevated != null) && (m_elevated.IsComplete == false))
+				m_elevated.Abort();
 		}
 
 		public void Add(Ping p)

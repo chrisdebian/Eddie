@@ -29,9 +29,6 @@ namespace Eddie.UI.Cocoa.Osx
 
 		[Outlet]
 		AppKit.NSMenuItem MnuMainQuit { get; set; }
-
-		[Outlet]
-		AppKit.NSMenuItem MnuMainSpeedTest { get; set; }
 		
 		void ReleaseDesignerOutlets ()
 		{
@@ -63,11 +60,6 @@ namespace Eddie.UI.Cocoa.Osx
 			if (MnuMainQuit != null) {
 				MnuMainQuit.Dispose ();
 				MnuMainQuit = null;
-			}
-
-			if (MnuMainSpeedTest != null) {
-				MnuMainSpeedTest.Dispose ();
-				MnuMainSpeedTest = null;
 			}
 		}
 	}

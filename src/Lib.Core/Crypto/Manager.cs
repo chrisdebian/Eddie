@@ -36,6 +36,39 @@ namespace Eddie.Core.Crypto
 			return decrypted;
 		}
 
+		public static bool FixedTimeEquals(string a, string b)
+		{
+			if ((a == null) || (b == null))
+				return false;
+
+			byte[] ba = Encoding.UTF8.GetBytes(a);
+			byte[] bb = Encoding.UTF8.GetBytes(b);
+
+			return FixedTimeEquals(ba, bb);
+		}
+
+#if EDDIE_DOTNET
+		public static bool FixedTimeEquals(byte[] a, byte[] b)
+		{
+			return CryptographicOperations.FixedTimeEquals(a, b);
+		}
+#else
+		// Portable constant-time comparison for targets without CryptographicOperations (.NET Framework / Mono).
+		// NoOptimization/NoInlining keep the loop non-short-circuiting, matching the .NET runtime implementation.
+		[System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining | System.Runtime.CompilerServices.MethodImplOptions.NoOptimization)]
+		public static bool FixedTimeEquals(byte[] a, byte[] b)
+		{
+			if (a.Length != b.Length)
+				return false;
+
+			int accum = 0;
+			for (int i = 0; i < a.Length; i++)
+				accum |= a[i] ^ b[i];
+
+			return accum == 0;
+		}
+#endif
+
 		public static string HashSHA256(string data)
 		{
 			using (SHA256 sha256 = SHA256.Create())

@@ -466,12 +466,26 @@ namespace Eddie.Core
 				// Init WebServer
 				if ((Webserver.GetPath() != "") && (ProfileOptions.GetBool("webui.enabled") == true))
 				{
+					if (ProfileOptions.Get("webui.access_key") == "")
+					{
+						ProfileOptions.Set("webui.access_key", RandomGenerator.GetHash());
+						SaveSettings();
+					}
+
 					m_webserver = new Webserver();
 					m_webserver.Start();
 
 					UiManager.Broadcast("webui.init", "url", m_webserver.ListenUrl + "/?app=" + Platform.Instance.GetCode());
 
 					UiManager.Broadcast("init.step", "message", LanguageManager.GetText(LanguageItems.InitStepStartingWebserver));
+
+					// Headless (CLI, non-embedded): print connection info once so the operator can reach the Web UI.
+					// Not routed through Logs (log entries are broadcast to the WebServer client).
+					if (StartCommandLine.Exists("jsoninout") == false)
+					{
+						Console.WriteLine("Eddie Web UI: " + m_webserver.ListenUrl + "/");
+						Console.WriteLine("Eddie Web UI access key: " + ProfileOptions.Get("webui.access_key"));
+					}
 				}
 
 				UiManager.Broadcast("webui.ready");
@@ -1479,12 +1493,6 @@ namespace Eddie.Core
 			return null;
 		}
 
-		public void RefreshProvidersX() // Never used
-		{
-			// Refresh each provider
-			JobsManager.ProvidersRefresh.CheckNow();
-		}
-
 		public void RefreshProvidersInvalidateConnections()
 		{
 			// Refresh each provider AND invalidate all ping and discovery info
@@ -1566,8 +1574,9 @@ namespace Eddie.Core
 
 		public bool IsLogged()
 		{
+			// Intentional: skip login gate.
 			if (AirVPN == null)
-				return true; // TOCONTINUE
+				return true;
 
 			if (AirVPN.User == null)
 				return false;

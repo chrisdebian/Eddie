@@ -42,12 +42,6 @@ namespace Eddie.Core
 			Params = ParseCommandLine(line, ignoreFirst, firstIsAction);
 		}
 
-		public CommandLine(CommandLine commandLine)
-		{
-			foreach (KeyValuePair<string, string> item in Params)
-				Params[item.Key] = item.Value;
-		}
-
 		public CommandLine(string action, string key1, string val1)
 		{
 			Set("action", action);

@@ -1337,7 +1337,8 @@ namespace Eddie.Platform.Windows
 
 		public override string OsCredentialSystemName()
 		{
-			if (IsElevatedPrivileges()) // Are saved as Admin and not viewer by normal user, will become an issue.
+			// Intentional: skip OS credential store when already elevated.
+			if (IsElevatedPrivileges())
 				return "";
 			else
 				return "Windows Credential";

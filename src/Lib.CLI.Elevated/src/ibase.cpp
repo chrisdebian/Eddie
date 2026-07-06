@@ -371,6 +371,15 @@ int IBase::Main()
 		return 1;
 	}
 
+	// Prepare the dedicated root-only runtime directory (purge leftovers + secure). Non-fatal here:
+	// nothing consumes it yet, and consumers enforce root-only at point of use. Status is reported
+	// over IPC once a client connects (see below), not on plain stdout.
+	RuntimePrepare();
+
+	// Prepare the dedicated root-only state directory (secure, no purge). Non-fatal here:
+	// network lock consumers enforce availability at point of use.
+	StatePrepare();
+
 	TransportListen(port);
 
 	for (;;)
@@ -432,6 +441,7 @@ int IBase::Main()
 				ReplyPID(GetCurrentProcessId());
 
 				LogRemote("Privileged tools run from: " + (m_stagingDir == "" ? "install directory (secure, no staging)" : "staging directory " + m_stagingDir));
+				LogRemote("Runtime directory: " + (m_runtimeDir == "" ? "not available" : m_runtimeDir));
 
 				//char buffer[NETBUFSIZE];
 				std::memset(buffer, 0, NETBUFSIZE);
@@ -599,7 +609,7 @@ int IBase::Main()
 
 	TransportServerClose();
 
-	StagingCleanup();
+	PrivilegedDataCleanup();
 
 	if (m_singleConnMode)
 	{
@@ -898,7 +908,7 @@ bool IBase::StagingPrepare()
 		return true;
 
 	std::string srcDir = GetProcessPathCurrentDir();
-	FsDirectoryCreate(FsFileGetDirectory(stagingBase)); // .../Eddie-VPN | .../eddie-vpn
+	FsDirectoryCreate(GetPrivilegedDataDir());
 	FsDirectoryCreate(stagingBase);                     // .../stage
 	FsDirectoryCreate(stagingDir);                      // .../stage/<mode>
 	if (FsDirectoryEnsureRootOnly(stagingDir) == false)
@@ -909,7 +919,6 @@ bool IBase::StagingPrepare()
 	}
 
 	std::vector<std::string> files = FsFilesInPath(srcDir);
-	int copied = 0;
 	for (std::vector<std::string>::const_iterator i = files.begin(); i != files.end(); ++i)
 	{
 		const std::string& file = *i;
@@ -946,7 +955,6 @@ bool IBase::StagingPrepare()
 			return false;
 		}
 		FsFileMakeRunnable(dst);
-		copied++;
 	}
 
 	m_stagingDir = stagingDir;
@@ -955,19 +963,193 @@ bool IBase::StagingPrepare()
 
 void IBase::StagingCleanup()
 {
-	if (m_stagingDir == "")
-		return;
+	std::string stagingDir = GetStagingDir() + FsPathSeparator + GetLaunchMode();
+	if (m_stagingDir != "")
+		stagingDir = m_stagingDir;
 
-	std::string stagingDir = m_stagingDir;
 	m_stagingDir = "";
-	FsDirectoryDelete(stagingDir, true); // .../stage/<mode>
 
-	// Best-effort removal of the now-possibly-empty parents (non-recursive delete only succeeds when
-	// empty): the staging base (.../stage) is removed once the other mode's subdir is also gone, and
-	// the shared runtime parent (POSIX dir holding the socket) is left untouched while still in use.
-	std::string stagingBase = FsFileGetDirectory(stagingDir);
-	FsDirectoryDelete(stagingBase, false);
-	FsDirectoryDelete(FsFileGetDirectory(stagingBase), false);
+	if (FsDirectoryExists(stagingDir))
+		FsDirectoryDelete(stagingDir, true);
+}
+
+void IBase::RuntimeCleanup()
+{
+	std::string runtimeDir = GetRuntimeDir();
+	if (m_runtimeDir != "")
+		runtimeDir = m_runtimeDir;
+
+	m_runtimeDir = "";
+
+	if (FsDirectoryExists(runtimeDir))
+		FsDirectoryDelete(runtimeDir, true);
+}
+
+void IBase::StateCleanup()
+{
+	m_stateDir = "";
+
+	std::string stateDir = GetStateDir();
+	if (FsDirectoryExists(stateDir))
+		FsDirectoryDelete(stateDir, false);
+}
+
+void IBase::PrivilegedDataCleanup()
+{
+	StagingCleanup();
+	RuntimeCleanup();
+	StateCleanup();
+
+	// Best-effort removal of empty parents (non-recursive delete only succeeds when empty).
+	std::string base = GetPrivilegedDataDir();
+	FsDirectoryDelete(GetStagingDir(), false);
+	FsDirectoryDelete(base + FsPathSeparator + "run", false);
+	FsDirectoryDelete(base, false);
+}
+
+std::string IBase::GetStagingDir()
+{
+	return GetPrivilegedDataDir() + FsPathSeparator + "stage";
+}
+
+std::string IBase::GetRuntimeDir()
+{
+	return GetPrivilegedDataDir() + FsPathSeparator + "run" + FsPathSeparator + GetLaunchMode();
+}
+
+std::string IBase::GetStateDir()
+{
+	return GetPrivilegedDataDir() + FsPathSeparator + "state";
+}
+
+bool IBase::StatePrepare()
+{
+	std::string stateDir = GetStateDir();
+
+	// Do not purge: persistent backups must survive elevated restarts while network lock is active.
+	m_stateDir = "";
+
+	FsDirectoryCreate(GetPrivilegedDataDir());
+	FsDirectoryCreate(stateDir);
+	if (FsDirectoryEnsureRootOnly(stateDir) == false)
+	{
+		LogLocal("State: unable to secure directory " + stateDir);
+		return false;
+	}
+
+	m_stateDir = stateDir;
+	return true;
+}
+
+bool IBase::RuntimePrepare()
+{
+	std::string runtimeDir = GetRuntimeDir();
+
+	// Purge our own leftovers first: covers crashes and persistent backends (e.g. Windows ProgramData).
+	FsDirectoryDelete(runtimeDir, true);
+
+	m_runtimeDir = "";
+
+	std::string runtimeBase = FsFileGetDirectory(runtimeDir); // .../run
+	FsDirectoryCreate(GetPrivilegedDataDir());
+	FsDirectoryCreate(runtimeBase);                           // .../run
+	FsDirectoryCreate(runtimeDir);                            // .../run/<mode>
+	if (FsDirectoryEnsureRootOnly(runtimeDir) == false)
+	{
+		LogLocal("Runtime: unable to secure directory " + runtimeDir);
+		FsDirectoryDelete(runtimeDir, true);
+		return false;
+	}
+
+	m_runtimeDir = runtimeDir;
+	return true;
+}
+
+void IBase::EnsureRuntimeDirReady()
+{
+	if (m_runtimeDir == "")
+		RuntimePrepare();
+	if (m_runtimeDir == "" || FsDirectoryIsRootOnly(m_runtimeDir) == false)
+		ThrowException("Runtime directory not available");
+}
+
+void IBase::EnsureStateDirReady()
+{
+	if (m_stateDir == "")
+		StatePrepare();
+	if (m_stateDir == "" || FsDirectoryIsRootOnly(m_stateDir) == false)
+		ThrowException("State directory not available");
+}
+
+std::string IBase::FsRuntimeTempPath(const std::string& filename)
+{
+	EnsureRuntimeDirReady();
+
+	std::string name = StringEnsureFileName(filename);
+	if (name == "")
+		name = "runtime";
+
+	return m_runtimeDir + FsPathSeparator + name;
+}
+
+std::string IBase::FsWriteRootOnlyRuntimeFile(const std::string& filename, const std::string& body)
+{
+	std::string path = FsRuntimeTempPath(filename);
+
+	FsFileDelete(path);
+
+	if (FsFileWriteText(path, body) == false)
+		ThrowException("Unable to write runtime file");
+
+	FsFileEnsureRootOnly(path);
+
+	return path;
+}
+
+std::string IBase::FsWriteRootOnlyTempConfig(const std::string& prefix, const std::string& id, const std::string& ext, const std::string& body)
+{
+	EnsureRuntimeDirReady();
+
+	std::string namePrefix = StringEnsureFileName(prefix);
+	if (namePrefix == "")
+		namePrefix = "config";
+
+	std::string name = namePrefix + "_" + StringEnsureFileName(id) + "_" + std::to_string(GetTimestampUnixUsec()) + "." + ext;
+	std::string path = m_runtimeDir + FsPathSeparator + name;
+
+	FsFileDelete(path);
+
+	if (FsFileWriteText(path, body) == false)
+		ThrowException("Unable to write runtime config file");
+
+	FsFileEnsureRootOnly(path);
+
+	return path;
+}
+
+std::string IBase::FsStatePath(const std::string& filename)
+{
+	EnsureStateDirReady();
+
+	std::string name = StringEnsureFileName(filename);
+	if (name == "")
+		name = "state";
+
+	return m_stateDir + FsPathSeparator + name;
+}
+
+std::string IBase::FsWriteRootOnlyStateFile(const std::string& filename, const std::string& body)
+{
+	std::string path = FsStatePath(filename);
+
+	FsFileDelete(path);
+
+	if (FsFileWriteText(path, body) == false)
+		ThrowException("Unable to write state file");
+
+	FsFileEnsureRootOnly(path);
+
+	return path;
 }
 
 std::string IBase::GetProcessPathCurrent()
@@ -1025,7 +1207,7 @@ bool IBase::FsFileWriteText(const std::string& path, const std::string& body)
 {
 	std::ofstream f(path);
 	if (!f)
-		return "";
+		return false;
 	f << body;
 	f.close();
 	return true;
@@ -1390,21 +1572,6 @@ bool IBase::StringIsIPv6(const std::string& ip) // TOFIX: can be better
 	return ip.find(':') != std::string::npos;
 }
 
-// Normalization and compression (for IPv6), like "0000:0000::1" => "::1";
-std::string IBase::StringIpNormalize(const std::string& ip)
-{
-	if (StringIsIPv4(ip))
-	{
-		return "todo:" + ip;
-	}
-	else if (StringIsIPv6(ip))
-	{
-		return "todo:" + ip;
-	}
-	else
-		return "";
-}
-
 std::string IBase::StringIpRemoveInterface(const std::string& ip)
 {
 	// "ff01::%lo0/32" => "ff01::/32"	
@@ -1571,13 +1738,18 @@ std::string IBase::CheckValidOpenVpnConfigFile(const std::string& path)
 	if (FsFileExists(path) == false)
 		return "file not found";
 
-	std::string body = FsFileReadText(path);
+	return CheckValidOpenVpnConfigContent(FsFileReadText(path));
+}
+
+std::string IBase::CheckValidOpenVpnConfigContent(const std::string& body)
+{
 	std::vector<std::string> lines = StringToVector(body, '\n');
 	for (std::vector<std::string>::const_iterator i = lines.begin(); i != lines.end(); ++i)
 	{
 		std::string lineNormalized = *i;
-		lineNormalized = StringTrim(StringToLower(lineNormalized));
-		lineNormalized = StringReplaceAll(lineNormalized, "\t", " ");
+		lineNormalized = StringToLower(lineNormalized);
+		lineNormalized = StringReplaceAll(lineNormalized, "\t", " "); // Collapse TABs first so trim/prefix matching cannot be bypassed regardless of StringTrim's char set
+		lineNormalized = StringTrim(lineNormalized);
 
 		if (StringStartsWith(lineNormalized, "#"))
 			continue;
@@ -1603,6 +1775,17 @@ std::string IBase::CheckValidOpenVpnConfigFile(const std::string& path)
 		if (StringStartsWith(lineNormalized, "route-pre-down ")) lineAllowed = false;
 		if (StringStartsWith(lineNormalized, "config ")) lineAllowed = false;
 		if (StringStartsWith(lineNormalized, "include ")) lineAllowed = false;
+
+		// File-writing directives: running as root these let an attacker clobber any
+		// root-owned file with process output (e.g. 'log /etc/passwd'). Eddie captures
+		// stdout/stderr itself and never relies on these, so they can be safely refused.
+		if (StringStartsWith(lineNormalized, "log ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "log-append ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "status ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "status-version ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "writepid ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "tmp-dir ")) lineAllowed = false;
+		if (StringStartsWith(lineNormalized, "ifconfig-pool-persist ")) lineAllowed = false;
 
 		if (lineAllowed == false)
 			return "directive '" + lineNormalized + "' not allowed";

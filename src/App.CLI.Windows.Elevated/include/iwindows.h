@@ -64,7 +64,7 @@ protected:
 	virtual std::vector<char> FsFileReadBytes(const std::string& path);
 	virtual std::vector<std::string> FsFilesInPath(const std::string& path);
 	virtual std::string FsGetTempPath();
-	virtual std::string GetStagingDir();
+	virtual std::string GetPrivilegedDataDir();
 	virtual std::vector<std::string> FsGetEnvPath();
 	virtual std::string FsGetRealPath(std::string path);
 	virtual bool FsFileIsExecutable(std::string path);
@@ -96,7 +96,6 @@ protected:
 	virtual std::string SystemWideDataGet(const std::string& key, const std::string& def);
 	virtual bool SystemWideDataDel(const std::string& key);
 	virtual bool SystemWideDataClean();
-	virtual std::string CheckIfClientPathIsAllowed(const std::string& path);
 	virtual std::string CheckExecutablePathPermissions(const std::string& path);
 #ifndef EDDIE_IPC_LOCAL
 	virtual int GetProcessIdMatchingIPEndPoints(struct sockaddr_in& addrClient, struct sockaddr_in& addrServer);

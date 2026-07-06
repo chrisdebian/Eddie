@@ -29,6 +29,7 @@ namespace Eddie.Core
 		public bool Omissis = false; // Dump in support log with omissis
 		public bool InternalOnly = false; // Don't show in UI, don't dump in support log
 		public bool DontUserReset = false; // If true, the 'Reset All' launched by user don't clean this option.
+		public bool Secret = false; // Value must never be exposed to untrusted UI clients (redacted per-client, e.g. WebserverClient).
 
 		public Json GetJson()
 		{
@@ -40,6 +41,7 @@ namespace Eddie.Core
 			j["omissis"].Value = Omissis;
 			j["internalonly"].Value = InternalOnly;
 			j["dontuserreset"].Value = DontUserReset;
+			j["secret"].Value = Secret;
 
 			return j;
 		}

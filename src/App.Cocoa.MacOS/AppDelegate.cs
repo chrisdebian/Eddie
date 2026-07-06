@@ -123,6 +123,8 @@ namespace Eddie.UI.Cocoa.Osx
 
 			MnuMainQuit.Activated += (object sender, EventArgs e) =>
 			{
+				if (UiClient.Instance.MainWindow == null)
+					return;
                 UiClient.Instance.MainWindow.Shutdown();
 			};
 		}

@@ -119,7 +119,6 @@
     <Compile Include="Jobs\RealtimeNetworkStats.cs" />
     <Compile Include="Jobs\Updater.cs" />
     <Compile Include="LanguageManager.cs" />
-    <Compile Include="GeneralOptions.cs" />
     <Compile Include="ProfileOption.cs" />
     <Compile Include="ProfileOptions.cs" />
     <Compile Include="Providers\IProvider.cs" />
@@ -140,7 +139,6 @@
     <Compile Include="ProvidersManager.cs" />
     <Compile Include="Providers\Service.cs" />
     <Compile Include="Providers\OpenVPN.cs" />
-    <Compile Include="RemoteAccess.cs" />
     <Compile Include="PerformanceScope.cs" />
     <Compile Include="Tools\ITool.cs" />
     <Compile Include="TorControl.cs" />
@@ -155,7 +153,6 @@
     <Compile Include="ConnectionTypes\Hummingbird.cs" />
     <Compile Include="ConnectionTypes\WireGuard.cs" />
     <Compile Include="ConnectionTypes\OpenVPN.cs" />
-    <Compile Include="UiClientLegacy.cs" />
     <Compile Include="ApiManager.cs" />
     <Compile Include="UiManager.cs" />
     <Compile Include="UI\App.cs" />

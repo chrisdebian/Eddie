@@ -96,9 +96,6 @@ private:
 
 	int m_socket4 = -1;
 	int m_socket6 = -1;
-
-public:
-	void TestDebug();
 };
 
 

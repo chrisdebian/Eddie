@@ -31,7 +31,6 @@ protected:
 	virtual std::vector<std::string> GetNetworkInterfacesNames();	
 
 	virtual std::string SystemWideDataPath();
-	virtual std::string CheckIfClientPathIsAllowed(const std::string& path);	
 #ifndef EDDIE_IPC_LOCAL
 	virtual int GetProcessIdMatchingIPEndPoints(struct sockaddr_in& addrClient, struct sockaddr_in& addrServer);
 #endif
@@ -43,7 +42,7 @@ protected:
 	virtual pid_t GetParentProcessId(pid_t pid);
 	virtual pid_t GetProcessIdOfName(const std::string& name);
 	virtual std::string StringEnsureInterfaceName(const std::string& str);
-	virtual std::string GetStagingDir();
+	virtual std::string GetPrivilegedDataDir();
 #ifdef EDDIE_IPC_UNIXSOCKET
 	virtual std::string GetIpcRuntimeDir();
 	virtual int GetSocketPeerPid(HSOCKET s);

@@ -8,17 +8,17 @@ set -euo pipefail
 #SCRIPTDIR=$(dirname $(realpath "$0"))
 SCRIPTDIR="$(cd "$(dirname "$0")" && pwd -P)"
 
-if [ "$1" == "" ]; then
+if [ "${1-}" == "" ]; then
 	echo First arg must be Path: yes,no
 	exit 1
 fi
 
-if [ "$2" == "" ]; then
+if [ "${2-}" == "" ]; then
 	echo Second arg must be Force: yes,no
 	exit 1
 fi
 
-if [ "$3" == "" ]; then
+if [ "${3-}" == "" ]; then
 	echo Third arg must be Hardening: yes,no
 	exit 1
 fi

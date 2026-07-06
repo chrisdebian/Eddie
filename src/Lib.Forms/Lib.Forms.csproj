@@ -77,18 +77,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Controls\Connection.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Controls\Connection.Designer.cs">
-      <DependentUpon>Connection.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Controls\Dashboard.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Controls\Dashboard.Designer.cs">
-      <DependentUpon>Dashboard.cs</DependentUpon>
-    </Compile>
     <Compile Include="Controls\ListViewItemProvider.cs" />
     <Compile Include="Controls\ListViewItemProtocol.cs" />
     <Compile Include="Controls\Tooltip.cs">
@@ -115,12 +103,6 @@
     </Compile>
     <Compile Include="Controls\MenuButton.cs">
       <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="Controls\Provider.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="Controls\Provider.Designer.cs">
-      <DependentUpon>Provider.cs</DependentUpon>
     </Compile>
     <Compile Include="Forms\WindowProviderEditWireGuard.cs">
       <SubType>Form</SubType>
@@ -259,15 +241,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Controls\Connection.resx">
-      <DependentUpon>Connection.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Controls\Dashboard.resx">
-      <DependentUpon>Dashboard.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Controls\Provider.resx">
-      <DependentUpon>Provider.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Forms\WindowProviderEditWireGuard.resx">
       <DependentUpon>WindowProviderEditWireGuard.cs</DependentUpon>
     </EmbeddedResource>

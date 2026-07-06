@@ -148,10 +148,13 @@ REQUIRES=""
 if [ $PROJECT = "cli" ]; then 
     REQUIRES="${REQUIRES} openvpn stunnel polkit"
 elif [ $PROJECT = "ui" ]; then
+    REQUIRES="${REQUIRES} openvpn stunnel polkit libnotify"
     if [ "${LINE}" = "u" ]; then
-        REQUIRES="${REQUIRES} openvpn stunnel polkit libnotify"
-    elif [ "${LINE}" = "l" ]; then
-        REQUIRES="${REQUIRES} openvpn stunnel polkit libnotify"
+        if [ $DISTRO = "opensuse" ]; then
+            REQUIRES="${REQUIRES} gtk3 libwebkit2gtk-4_1-0 libayatana-appindicator3-1"
+        elif [ $DISTRO = "fedora" ]; then
+            REQUIRES="${REQUIRES} gtk3 webkit2gtk4.1 libayatana-appindicator-gtk3"
+        fi
     fi
 fi
 
@@ -168,10 +171,14 @@ find ${TARGETDIR} -type f | sed "s|$TARGETDIR||g" | sed "s/^/\"\//g" | sed "s/$/
 cat ${TARGETDIR}/../rpmbuild.spec
 
 # RPM Build
-cd ${TARGETDIR} # Unable to specify an output path
+# Use an absolute output dir so it does not depend on the current directory, and
+# run rpmbuild from outside the buildroot: %clean removes the buildroot, which
+# would otherwise be rpmbuild's own cwd (causing "getcwd() failed" noise).
+OUTDIR=$(dirname "${TARGETDIR}")
+sed -i "s|^%define _rpmdir .*|%define _rpmdir ${OUTDIR}|" "${TARGETDIR}/../rpmbuild.spec"
+cd "${OUTDIR}"
 rpmbuild -bb "${TARGETDIR}/../rpmbuild.spec" --buildroot "${TARGETDIR}" 
 
-cd ..
 ARCHRPM=${ARCH}
 if [ ${ARCH} = "armv7l" ]; then
     ARCHRPM="armv7hnl"
@@ -182,7 +189,7 @@ elif [ ${ARCH} = "x64" ]; then
 fi
 
 # Final move
-mv eddie-${PROJECT}-${VERSION}-0.${ARCHRPM}.rpm ${FINALPATH}
+mv "${OUTDIR}/eddie-${PROJECT}-${VERSION}-0.${ARCHRPM}.rpm" ${FINALPATH}
 
 # Staff Deploy
 if test -n "${EDDIESIGNINGDIR:-}"; then

@@ -80,13 +80,6 @@ extern "C" {
 		return chmod(filename, (mode_t)mode);
 	}
 
-	/*
-	int eddie_file_set_mode_str(const char* filename, const char* mode)
-	{
-		return eddie_file_set_mode(filename, (int)strtol(mode, NULL, 8));
-	}
-	*/
-
 	bool eddie_file_get_runasroot(const char* filename)
 	{
 		struct stat s;
@@ -351,26 +344,20 @@ extern "C" {
 
 		status = SecItemCopyMatching(query, (CFTypeRef*)&item);
 		
+		bool result = false;
 		if (status == errSecSuccess) 
 		{
 			status = SecKeychainItemDelete(item);
 			CFRelease(item);
-			if (status == errSecSuccess) {
-				return true;
-			} else {
-				return false;
-			}
+			result = (status == errSecSuccess);
 		} 
 		else if (status == errSecItemNotFound) 
 		{
-			return true;
+			result = true;
 		} 
-		else 
-		{
-			return false;
-		}
 
 		CFRelease(query);
+		return result;
 	}
 		
 	//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

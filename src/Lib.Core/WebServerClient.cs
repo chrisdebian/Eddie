@@ -37,7 +37,47 @@ namespace Eddie.Core
 			base.OnReceive(data);
 
 			lock (Pendings)
-				Pendings.Add(data);
+				Pendings.Add(Redact(data));
+		}
+
+		// The browser is an untrusted client: blank the value of any option flagged as Secret
+		// before it reaches the pull queue. The broadcast Json is shared across clients, so a
+		// clone is required to avoid altering the copy delivered to trusted (embedded) clients.
+		private Json Redact(Json data)
+		{
+			if (data == null)
+				return data;
+
+			string command = data["command"].Value as string;
+
+			if (command == "ui.boot")
+			{
+				Json redacted = data.Clone();
+				Json options = redacted["options"].Json;
+				if ((options != null) && (options.IsDictionary()))
+				{
+					foreach (string name in new List<string>(options.GetDictionary().Keys))
+					{
+						JsonValue option = options[name];
+						if (Conversions.ToBool(option["secret"].Value))
+							option["value"].Value = "";
+					}
+				}
+				return redacted;
+			}
+			else if (command == "option.change")
+			{
+				string name = data["name"].Value as string;
+				ProfileOption option = (name != null) ? Engine.Instance.ProfileOptions.GetOption(name) : null;
+				if ((option != null) && option.Secret)
+				{
+					Json redacted = data.Clone();
+					redacted["value"].Value = "";
+					return redacted;
+				}
+			}
+
+			return data;
 		}
 	}
 }
