@@ -36,8 +36,7 @@ namespace Eddie.Core
 		private WebserverClient m_client = new WebserverClient();
 
 		private const string SessionCookieName = "eddie_session";
-		private static readonly TimeSpan SessionLifetime = TimeSpan.FromHours(24);
-		private readonly Dictionary<string, DateTime> m_sessions = new Dictionary<string, DateTime>();
+		private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(30);
 
 		public static string GetPath()
 		{
@@ -329,15 +328,14 @@ namespace Eddie.Core
 			string accessKey = Engine.Instance.ProfileOptions.Get("webui.access_key");
 			if ((accessKey != "") && Crypto.Manager.FixedTimeEquals(submittedKey, accessKey))
 			{
-				string sessionId = CreateSession();
-				context.Response.Headers.Add("Set-Cookie", SessionCookieName + "=" + sessionId + "; HttpOnly; SameSite=Strict; Path=/");
-				context.Response.Redirect("/");
+				string token = CreateSessionToken(accessKey);
+				context.Response.Headers.Add("Set-Cookie", SessionCookieName + "=" + token + "; HttpOnly; SameSite=Strict; Path=/; Max-Age=" + (int)SessionLifetime.TotalSeconds);
+				context.Response.StatusCode = (int)HttpStatusCode.NoContent;
 				return "";
 			}
 
 			context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-			context.Response.ContentType = "text/html; charset=utf-8";
-			return "<!DOCTYPE html><meta charset=\"utf-8\"><body style=\"font-family:sans-serif\"><p>Invalid access key. <a href=\"/\">Try again</a></p></body>";
+			return "";
 		}
 
 		private static string ParseKeyFromBody(string body, string contentType)
@@ -390,38 +388,40 @@ namespace Eddie.Core
 			// Session cookie (browser)
 			Cookie cookie = context.Request.Cookies[SessionCookieName];
 			if ((cookie != null) && (cookie.Value != ""))
-			{
-				lock (m_sessions)
-				{
-					DateTime expiry;
-					if (m_sessions.TryGetValue(cookie.Value, out expiry))
-					{
-						if (expiry > DateTime.UtcNow)
-						{
-							m_sessions[cookie.Value] = DateTime.UtcNow.Add(SessionLifetime); // sliding renewal
-							return true;
-						}
-
-						m_sessions.Remove(cookie.Value);
-					}
-				}
-			}
+				return ValidateSessionToken(cookie.Value, accessKey);
 
 			return false;
 		}
 
-		private string CreateSession()
+		// Stateless session token: "<expiryUnixSeconds>.<hmac>", where the HMAC key is the persisted
+		// access key. It carries no server-side state, so sessions survive a restart; rotating the
+		// access key changes the HMAC key and therefore invalidates every previously issued token.
+		private static readonly DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+		private static string CreateSessionToken(string accessKey)
 		{
-			string id = RandomGenerator.GetHash();
-			lock (m_sessions)
-				m_sessions[id] = DateTime.UtcNow.Add(SessionLifetime);
-			return id;
+			long expiry = (long)(DateTime.UtcNow.Add(SessionLifetime) - UnixEpoch).TotalSeconds;
+			string payload = expiry.ToString(System.Globalization.CultureInfo.InvariantCulture);
+			return payload + "." + Crypto.Manager.HmacSHA256(accessKey, payload);
 		}
 
-		public void ClearSessions()
+		private static bool ValidateSessionToken(string token, string accessKey)
 		{
-			lock (m_sessions)
-				m_sessions.Clear();
+			int posDot = token.IndexOf('.');
+			if (posDot <= 0)
+				return false;
+
+			string payload = token.Substring(0, posDot);
+			string signature = token.Substring(posDot + 1);
+
+			if (Crypto.Manager.FixedTimeEquals(signature, Crypto.Manager.HmacSHA256(accessKey, payload)) == false)
+				return false;
+
+			long expiry;
+			if (long.TryParse(payload, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out expiry) == false)
+				return false;
+
+			return UnixEpoch.AddSeconds(expiry) > DateTime.UtcNow;
 		}
 
 		private static bool CheckHost(Dictionary<string, string> requestHeaders)

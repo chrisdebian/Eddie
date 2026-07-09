@@ -39,7 +39,6 @@ namespace Eddie.Core.UI
 			}
 			else if (key == "pinger")
 			{
-				// WIP must be InvalidatePinger(), but check Refresh.Full steps
 				Engine.Instance.InvalidateConnections();
 			}
 			else if (key == "discovery")

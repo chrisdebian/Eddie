@@ -1141,6 +1141,7 @@ namespace Eddie.Core.ConnectionTypes
 			m_elevatedCommand.Parameters["command"] = "openvpn";
 			m_elevatedCommand.Parameters["action"] = "start";
 			m_elevatedCommand.Parameters["id"] = Id;
+			// Intentional: full config body over IPC; elevated validates and writes a root-only runtime file.
 			m_elevatedCommand.Parameters["config"] = m_configStartup.Build();
 			OverrideElevatedCommandParameters();
 

@@ -85,6 +85,15 @@ namespace Eddie.Core.Crypto
 			}
 		}
 
+		public static string HmacSHA256(string key, string data)
+		{
+			using (HMACSHA256 hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
+			{
+				byte[] bytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+				return ExtensionsString.BytesToHex(bytes);
+			}
+		}
+
 		public static string HashSHA256File(string path)
 		{
 			using (FileStream stream = File.OpenRead(path))

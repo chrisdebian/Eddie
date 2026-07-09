@@ -244,6 +244,12 @@ namespace Eddie.Core.ConfigBuilder
 				RemoveDirective("reneg-packets");
 			}
 
+			if (DisablesDataChannelOffload())
+			{
+				if (ExistsDirective("disable-dco") == false)
+					AppendDirective("disable-dco", "", "OS");
+			}
+
 			// Platform specific
 			Platform.Instance.AdaptConfigOpenVpn(this);
 		}
@@ -290,6 +296,55 @@ namespace Eddie.Core.ConfigBuilder
 		public bool ExistsDirective(string name)
 		{
 			return Directives.ContainsKey(name);
+		}
+
+		// Mirrors OpenVPN dco_check_startup_option() / dco_check_option() checks that can be
+		// evaluated from the startup config before the tunnel is opened.
+		public bool DisablesDataChannelOffload()
+		{
+			if (ExistsDirective("disable-dco"))
+				return true;
+
+			if (ExistsDirective("socks-proxy"))
+				return true;
+
+			if (ExistsDirective("http-proxy"))
+				return true;
+
+			if (ExistsDirective("fragment"))
+				return true;
+
+			if (ExistsDirective("management-query-proxy"))
+				return true;
+
+			if (ExistsDirective("comp-lzo"))
+				return true;
+
+			if (ExistsDirective("compress"))
+				return true;
+
+			if (ExistsDirective("allow-compression"))
+			{
+				string allowCompression = GetOneDirectiveText("allow-compression").Trim().ToLowerInvariant();
+				if (allowCompression != "no")
+					return true;
+			}
+
+			if (ExistsDirective("dev"))
+			{
+				string dev = GetOneDirectiveText("dev").Trim().ToLowerInvariant();
+				if ((dev == "tap") || (dev.StartsWithInv("tap ")))
+					return true;
+			}
+
+			if (ExistsDirective("dev-type"))
+			{
+				string devType = GetOneDirectiveText("dev-type").Trim().ToLowerInvariant();
+				if (devType == "tap")
+					return true;
+			}
+
+			return false;
 		}
 
 		public void RemoveDirective(string name)

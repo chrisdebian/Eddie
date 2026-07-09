@@ -43,6 +43,7 @@ namespace Eddie.UI.Cocoa.Osx
 
 			// Remember: called program still have uid as normal user. Use setuid().
 
+			// Intentional: legacy Cocoa UI elevated launch only; Eddie3 uses Platform.RunElevated. Retire with legacy UI.
 			result = AuthorizationExecuteWithPrivileges(authReference, toolPath, 0, args, IntPtr.Zero);
 			int resultFree = AuthorizationFree(authReference, AuthorizationFlags.DestroyRights);
 			return (result == 0);

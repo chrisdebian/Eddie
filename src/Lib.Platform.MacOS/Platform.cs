@@ -996,6 +996,7 @@ namespace Eddie.Platform.MacOS
 			}
 			else if (elevationMethod == "ui")
 			{
+				// Intentional: legacy Cocoa ui elevation; sync broadcast + pgrep until RunElevated gets a pid.
 				Json jArgs = new Json();
 				jArgs.EnsureArray();
 				foreach (string arg in arguments)

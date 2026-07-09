@@ -641,7 +641,7 @@ void IBase::Do(const std::string& commandId, const std::string& command, std::ma
 	else if (command == "ping-request")
 	{
 		uint16_t id = StringToInt(params["id"]);
-		std::string ip = params["ip"];
+		std::string ip = StringEnsureIpAddress(params["ip"]);
 		int timeoutMs = StringToInt(params["timeout"]);
 
 		m_pinger.Request(id, ip, timeoutMs, "");

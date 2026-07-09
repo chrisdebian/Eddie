@@ -480,6 +480,7 @@ namespace Eddie.Core
 					UiManager.Broadcast("init.step", "message", LanguageManager.GetText(LanguageItems.InitStepStartingWebserver));
 
 					// Headless (CLI, non-embedded): print connection info once so the operator can reach the Web UI.
+					// Intentional: headless CLI prints Web UI URL and access key on stdout for the operator.
 					// Not routed through Logs (log entries are broadcast to the WebServer client).
 					if (StartCommandLine.Exists("jsoninout") == false)
 					{

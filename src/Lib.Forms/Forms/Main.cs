@@ -435,6 +435,7 @@ namespace Eddie.Forms.Forms
 			}
 
 			// Start
+			// Intentional: remember-login stores credentials in profile and pre-fills the login form.
 			if (Engine.Instance.ProfileOptions.GetBool("remember"))
 			{
 				chkRemember.Checked = true;
@@ -1146,6 +1147,7 @@ namespace Eddie.Forms.Forms
 
 		private void cmdLogsCommand_Click(object sender, EventArgs e)
 		{
+			// Intentional: expert mode runs arbitrary UiClient commands (advanced.expert option).
 			WindowCommand Dlg = new WindowCommand();
 			if (Dlg.ShowDialog(this) == DialogResult.OK)
 			{

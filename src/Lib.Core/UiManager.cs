@@ -161,10 +161,10 @@ namespace Eddie.Core
 				if (sender is WebserverClient)
 					return null; // Only trusted clients may rotate the key.
 
+				// Rotating the key changes the HMAC key used to sign session cookies,
+				// which invalidates every previously issued session token.
 				Engine.Instance.ProfileOptions.Set("webui.access_key", RandomGenerator.GetHash());
 				Engine.Instance.SaveSettings();
-				if (Engine.Instance.Webserver != null)
-					Engine.Instance.Webserver.ClearSessions();
 
 				Json result = new Json();
 				result["access_key"].Value = Engine.Instance.ProfileOptions.Get("webui.access_key");

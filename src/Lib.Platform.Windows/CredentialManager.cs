@@ -275,7 +275,7 @@ namespace Eddie.Platform.Windows
 
 		public override string ToString()
 		{
-			return string.Format(CultureInfo.InvariantCulture, "CredentialType: {0}, ApplicationName: {1}, UserName: {2}, Password: {3}", CredentialType, ApplicationName, UserName, Password);
+			return string.Format(CultureInfo.InvariantCulture, "CredentialType: {0}, ApplicationName: {1}, UserName: {2}, Password: ***", CredentialType, ApplicationName, UserName);
 		}
 	}
 }

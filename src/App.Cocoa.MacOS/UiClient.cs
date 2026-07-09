@@ -82,6 +82,7 @@ namespace Eddie.UI.Cocoa.Osx
 
             if (cmd == "elevated.start")
             {
+                // Intentional: legacy Cocoa UI elevated.start via ProcessRootLauncher; Eddie3 uses Platform.RunElevated.
                 string path = Core.Platform.Instance.GetElevatedHelperPath();
 				List<string> args = new List<string>();
                 foreach (var arg in data["args"].Json.GetArray())

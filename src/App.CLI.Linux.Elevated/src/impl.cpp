@@ -56,7 +56,10 @@ int Impl::Main()
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP); // Any child process will be killed if this process died, Linux specific
 
-	m_hasSystemdResolved = ( (ExecEx(FsLocateExecutable("systemctl"), { "is-active", "--quiet", "systemd-resolved" }).exit == 0) && (FsFileExists(systemdPath)) );
+	std::string systemctlPath = FsLocateExecutable("systemctl", false);
+	m_hasSystemdResolved = (systemctlPath != ""
+		&& ExecEx(systemctlPath, { "is-active", "--quiet", "systemd-resolved" }).exit == 0
+		&& FsFileExists(systemdPath));
 
 	return IPosix::Main();
 }
@@ -162,7 +165,7 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 
 		if(m_hasSystemdResolved)
 		{
-			std::string resolvectlPath = FsLocateExecutable("resolvectl");
+			std::string resolvectlPath = FsLocateExecutable("resolvectl", false);
 			if (resolvectlPath != "")
 			{
 				std::string resolveNetifPath = "/run/systemd/resolve/netif";
@@ -1529,10 +1532,14 @@ bool Impl::ServiceInstall()
 {
 	if (m_hasSystemdResolved)
 	{
+		std::string systemctlPath = FsLocateExecutable("systemctl", false);
+		if (systemctlPath == "")
+			return true;
+
 		if (FsFileExists(systemdUnitPath)) // Remove if exists
 		{
-			ExecEx(FsLocateExecutable("systemctl"), { "stop", systemdUnitName });
-			ExecEx(FsLocateExecutable("systemctl"), { "disable", systemdUnitName });
+			ExecEx(systemctlPath, { "stop", systemdUnitName });
+			ExecEx(systemctlPath, { "disable", systemdUnitName });
 			FsFileDelete(systemdUnitPath);
 		}
 
@@ -1587,14 +1594,14 @@ bool Impl::ServiceInstall()
 
 		FsFileWriteText(systemdUnitPath, unit);		
 
-		ExecResult enableResult = ExecEx(FsLocateExecutable("systemctl"), { "enable", systemdUnitName });
+		ExecResult enableResult = ExecEx(systemctlPath, { "enable", systemdUnitName });
 		if (enableResult.exit != 0)
 		{
 			LogLocal("Enable " + systemdUnitName + " failed");
 			return false;
 		}
 
-		ExecResult startResult = ExecEx(FsLocateExecutable("systemctl"), { "start", systemdUnitName });
+		ExecResult startResult = ExecEx(systemctlPath, { "start", systemdUnitName });
 		if (startResult.exit != 0)
 		{
 			LogLocal("Start " + systemdUnitName + " failed");
@@ -1618,8 +1625,12 @@ bool Impl::ServiceUninstall()
 {
 	if (FsFileExists(systemdUnitPath))
 	{
-		ExecEx(FsLocateExecutable("systemctl"), { "stop", systemdUnitName });
-		ExecEx(FsLocateExecutable("systemctl"), { "disable", systemdUnitName });
+		std::string systemctlPath = FsLocateExecutable("systemctl", false);
+		if (systemctlPath != "")
+		{
+			ExecEx(systemctlPath, { "stop", systemdUnitName });
+			ExecEx(systemctlPath, { "disable", systemdUnitName });
+		}
 		FsFileDelete(systemdUnitPath);
 	}
 

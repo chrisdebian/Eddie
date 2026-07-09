@@ -780,7 +780,7 @@ namespace Eddie.Platform.Windows
 			if ((Engine.Instance.ProfileOptions.GetBool("windows.ipv6.bypass_dns")) && (Engine.Instance.ProfileOptions.GetBool("dns.delegate")))
 			{
 				config.AppendDirectives("pull-filter ignore \"dhcp-option DNS6\"", "OS");
-			}			
+			}
 		}
 
 		public override string GetConnectionTunDriver(Core.ConnectionTypes.IConnectionType connection)
@@ -788,10 +788,10 @@ namespace Eddie.Platform.Windows
 			if (connection is Core.ConnectionTypes.OpenVPN)
 			{
 				Core.ConnectionTypes.OpenVPN connectionOpenVPN = connection as Core.ConnectionTypes.OpenVPN;
-				if (connectionOpenVPN.ConfigStartup.ExistsDirective("comp-lzo") == false)
-					return "ovpn-dco";
-				else
+				if (connectionOpenVPN.ConfigStartup.DisablesDataChannelOffload())
 					return "tap-windows6";
+				else
+					return "ovpn-dco";
 			}
 			else if (connection is Core.ConnectionTypes.WireGuard)
 			{

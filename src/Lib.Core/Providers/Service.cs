@@ -902,8 +902,8 @@ namespace Eddie.Core.Providers
 			return FetchUrls(title, urls, parameters);
 		}
 
-		// This is the only method about exchange data between this software and AirVPN infrastructure.
-		// We don't use SSL. Useless layer in our case, and we need to fetch hostname and direct IP that don't permit common-name match.
+		// Intentional: AirVPN bootstrap uses HTTP without TLS; payload is AES-256 with RSA-wrapped session key (see below).
+		// Direct IP bootstrap URLs cannot rely on TLS common-name validation.
 
 		// 'S' is the AES 256 bit one-time session key, crypted with a RSA 4096 public-key.
 		// 'D' is the data from the client to our server, crypted with the AES.

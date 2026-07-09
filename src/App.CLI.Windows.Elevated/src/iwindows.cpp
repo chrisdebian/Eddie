@@ -1578,10 +1578,10 @@ int IWindows::SocketGetLastErrorCode()
 void IWindows::TransportListen(int port)
 {
 #ifdef EDDIE_IPC_NAMEDPIPE
-	// Named pipe transport. The NULL DACL lets any local user reach the SYSTEM-created pipe;
-	// connecting clients are authenticated by the integrity gate in Main(), not by the pipe ACL.
-	// TODO: restrict pipe-instance creation (FILE_FLAG_FIRST_PIPE_INSTANCE / create-instance ACE
-	// for SYSTEM+Administrators) to prevent pipe-name squatting by another local user.
+	// Named pipe transport. NULL DACL: any local user may connect; clients are authenticated
+	// by IntegrityCheckFileKnown in Main(), not by the pipe ACL (shared-service model).
+	// FILE_FLAG_FIRST_PIPE_INSTANCE + nMaxInstances=1: fail closed if the pipe name already
+	// exists (squatting) and allow only one client at a time (service/spot design).
 	// Pipe keyed by launch mode ("spot"/"service"); the port is only used by the TCP fallback below.
 	(void)port;
 	std::string pipeName = "\\\\.\\pipe\\eddie-elevated-" + GetLaunchMode();
@@ -1596,9 +1596,9 @@ void IWindows::TransportListen(int port)
 
 	m_ipcPipe = CreateNamedPipeA(
 		pipeName.c_str(),
-		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED, // overlapped: read and write must not serialize on the same handle
+		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
 		PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-		PIPE_UNLIMITED_INSTANCES,
+		1,
 		NETBUFSIZE, NETBUFSIZE, 0, &pipeSa);
 
 	if (m_ipcPipe == INVALID_HANDLE_VALUE)

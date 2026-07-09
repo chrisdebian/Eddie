@@ -808,9 +808,9 @@ UINT64 Impl::WfpRuleAdd(const std::string& xml)
 
 								pAddresses = (IP_ADAPTER_ADDRESSES*)MALLOC(outBufLen);
 								if (pAddresses == NULL) {
-									printf
-									("Memory allocation failed for IP_ADAPTER_ADDRESSES struct\n");
-									exit(1);
+									m_wfpLastError = "Memory allocation failed for IP_ADAPTER_ADDRESSES";
+									m_wfpLastErrorCode = 0;
+									return 0;
 								}
 
 								dwRetVal = GetAdaptersAddresses(family, flags, NULL, pAddresses, &outBufLen);

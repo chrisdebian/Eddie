@@ -28,7 +28,7 @@ echo Config: %config%
 echo Stop Service if running
 powershell -nop -c "$s=get-service EddieElevationService -ea SilentlyContinue;exit [int]($null -eq $s -or $s.Status -ne 'Running')"
 if errorlevel 1 goto :s
-powershell -nop -c "start-process sc.exe -ArgumentList stop,EddieElevationService -Verb RunAs -Wait"&timeout /t 2 /nobreak >nul
+powershell -nop -c "start-process sc.exe -ArgumentList stop,EddieElevationService -Verb RunAs -Wait; Start-Sleep -Seconds 2"
 :s
 
 echo Copy Deploy files
