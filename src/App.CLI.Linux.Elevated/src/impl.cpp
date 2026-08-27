@@ -660,7 +660,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 				ExecResult execResultRule = ExecEx(nft, args);
 				if (execResultRule.exit != 0)
 					ThrowException("nft issue: " + GetExecResultReport(execResultRule));
-				//output += GetExecResultReport(execResultRule) + "\n"; // TOCLEAN, removed in 2.24.0
 			}			
 
 			// Additional rule for incoming
@@ -703,7 +702,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 				ExecResult execResultRule = ExecEx(nft, args);
 				if (execResultRule.exit != 0)
 					ThrowException("nft issue: " + GetExecResultReport(execResultRule));
-				// output += GetExecResultReport(execResultRule) + "\n"; // TOCLEAN, removed in 2.24.0
 			}
 		}
 		else if (params["action"] == "del")
@@ -723,7 +721,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 					args.push_back("handle");
 					args.push_back(handle);	
 					ExecResult execResultRule = ExecEx(nft, args); // Ignore if fail								
-					//output += GetExecResultReport(execResultRule) + "\n"; // TOCLEAN, removed in 2.24.0
 				}				
 			}
 						
@@ -743,7 +740,6 @@ void Impl::Do(const std::string& commandId, const std::string& command, std::map
 					args.push_back("handle");
 					args.push_back(handle);									
 					ExecResult execResultRule = ExecEx(nft, args); // Ignore if fail								
-					//output += GetExecResultReport(execResultRule) + "\n"; // TOCLEAN, removed in 2.24.0
 				}				
 			}
 		}
